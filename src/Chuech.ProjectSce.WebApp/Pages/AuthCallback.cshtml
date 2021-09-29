@@ -1,0 +1,16 @@
+﻿@page
+@model Chuech.ProjectSce.WebApp.Pages.AuthCallbackModel
+@{
+    ViewData["Title"] = "Hold on...";
+}
+
+@section Scripts {
+    <script src="~/js/oidc-client.min.js"></script>
+    <script>
+        new Oidc.UserManager({ response_type: "code" }).signinRedirectCallback().then(function() {
+            window.location = "/";
+        }).catch(function(e) {
+            console.error(e);
+        });
+    </script>
+}

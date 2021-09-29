@@ -1,0 +1,35 @@
+version: '3.4'
+
+services:
+  webapp:
+    image: ${DOCKER_REGISTRY-}webapp
+    build:
+      context: .
+      dockerfile: src/Chuech.ProjectSce.WebApp/Dockerfile
+      
+  webapp-spa-dev-server:
+    image: ${DOCKER_REGISTRY-}webapp-spa-dev-server
+    build:
+      context: .
+      dockerfile: src/Chuech.ProjectSce.WebApp/project-sce-app/Dockerfile
+
+  identity:
+    image: ${DOCKER_REGISTRY-}identity
+    build:
+      context: .
+      dockerfile: src/Chuech.ProjectSce.Identity/Dockerfile
+
+  coreapi:
+    image: ${DOCKER_REGISTRY-}coreapi
+    build:
+      context: .
+      dockerfile: src/Chuech.ProjectSce.Core.API/Dockerfile
+
+  sqldb:
+    image: "postgres:13.3"
+    
+  event-bus:
+    image: "masstransit/rabbitmq"
+
+  redis:
+    image: "redis:6.2.5"

@@ -1,0 +1,80 @@
+version: '3.4'
+
+services:
+  webapp:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - IdentityUrlExternal=http://${CHUECH_EXTERNAL_ADDRESS}:6501
+      - DevServerUrl=http://webapp-spa-dev-server:8080
+    ports:
+      - "80"
+      - "6500:80"
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+    build:
+      args:
+        - using_external_dev_server=true
+  webapp-spa-dev-server:
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    ports:
+      - "8080"
+    volumes:
+      - ./src/Chuech.ProjectSce.WebApp/project-sce-app/:/app/:ro
+  identity:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - SpaClient=http://${CHUECH_EXTERNAL_ADDRESS}:6500
+      - ConnectionStrings__OperationalIdentity=Host=sqldb;Database=ProjectSce.OperationalIdentity;Username=postgres;Password=${SQL_DEV_PASSWORD}
+      - ConnectionStrings__Identity=Host=sqldb;Database=ProjectSce.Identity;Username=postgres;Password=${SQL_DEV_PASSWORD}
+      - GrpcPort=751
+      - HttpPort=80
+      - RabbitMQHost=event-bus
+      - RabbitMQUser=${RABBITMQ_DEV_USER}
+      - RabbitMQPassword=${RABBITMQ_DEV_PASSWORD}
+    ports:
+      - "80"
+      - "6501:80"
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+  coreapi:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - IdentityUrlInternal=http://identity
+      - IdentityGrpcUrl=http://identity:751
+      - ConnectionStrings__Core=Host=sqldb;Database=ProjectSce.Core;Username=postgres;Password=${SQL_DEV_PASSWORD}
+      - ConnectionStrings__FileStorage=Host=sqldb;Database=ProjectSce.FileStorage;Username=postgres;Password=${SQL_DEV_PASSWORD}
+      - ConnectionStrings__Redis=redis
+      - RabbitMQHost=event-bus
+      - RabbitMQUser=${RABBITMQ_DEV_USER}
+      - RabbitMQPassword=${RABBITMQ_DEV_PASSWORD}
+      - FileStorage__Location=/app/files
+    ports:
+      - "80"
+      - "6502:80"
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+      - ./DevData/core/files:/app/files
+  sqldb:
+    environment:
+      POSTGRES_PASSWORD: ${SQL_DEV_PASSWORD}
+    volumes:
+      - ./DevData/sqldb_postgres:/var/lib/postgresql/data
+    ports:
+      - "6600:5432"
+  event-bus:
+    hostname: "chuech"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEV_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEV_PASSWORD}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+    - ./DevData/RabbitMQ:/var/lib/rabbitmq/mnesia/

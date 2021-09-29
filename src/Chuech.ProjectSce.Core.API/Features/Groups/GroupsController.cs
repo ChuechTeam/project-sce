@@ -1,0 +1,43 @@
+﻿using Chuech.ProjectSce.Core.API.Features.Groups.ApiModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Chuech.ProjectSce.Core.API.Features.Groups;
+[Route("api/")]
+[ApiController]
+[Authorize]
+public class GroupsController : ControllerBase
+{
+    private readonly IMediator _mediator;
+
+    public GroupsController(IMediator mediator)
+    {
+        _mediator = mediator;
+    }
+
+    [HttpGet("institutions/{institutionId:int}/groups")]
+    public async Task<ActionResult<IEnumerable<GroupApiModel>>> GetAll(int institutionId, [FromQuery] bool includeUsers = false)
+    {
+        return Ok(await _mediator.Send(new GetGroups.Query(institutionId, includeUsers)));
+    }
+
+    [HttpGet("groups/{groupId:int}")]
+    public async Task<ActionResult<IEnumerable<GroupApiModel>>> Get(int groupId)
+    {
+        return Ok(await _mediator.Send(new GetGroupById.Query(groupId)));
+    }
+
+    [HttpPost("institutions/{institutionId:int}/groups/")]
+    public async Task<ActionResult<GroupApiModel>> Create(CreateGroup.Command command, int institutionId)
+    {
+        return Ok(await _mediator.Send(command with { InstitutionId = institutionId }));
+    }
+
+    [HttpPut("groups/{groupId:int}")]
+    public async Task<IActionResult> Update(UpdateGroup.Command command, int groupId)
+    {
+        await _mediator.Send(command with { GroupId = groupId });
+        return Ok();
+    }
+}

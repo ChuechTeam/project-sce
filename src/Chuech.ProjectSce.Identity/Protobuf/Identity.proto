@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+option csharp_namespace = "Chuech.ProjectSce.Identity.Grpc";
+
+import "google/protobuf/empty.proto";
+package IdentityApi;
+
+service UserService {
+  rpc GetAllUsers(google.protobuf.Empty) returns (UsersResponse);
+  rpc GetUsers(UsersRequest) returns (UsersResponse);
+}
+
+message User {
+  int32 id = 1;
+  string displayName = 2;
+}
+
+message UsersRequest {
+  repeated int32 ids = 1 [packed=true];
+}
+
+message UsersResponse {
+  map<int32, User> users = 1;
+}

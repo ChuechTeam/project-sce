@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <SpaRoot>project-sce-app/</SpaRoot>
+    <TypeScriptCompileBlocked>True</TypeScriptCompileBlocked>
+    <Nullable>enable</Nullable>
+	<ContainerBuild Condition="'$(ContainerBuild)' == ''">false</ContainerBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="3.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="5.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="5.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="VueCliMiddleware" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
+  </ItemGroup>
+
+  <!-- Build the SPA when not in Debug. -->
+  <Target Condition="'$(Configuration)' != 'Debug' And !$(ContainerBuild)" BeforeTargets="Build" Name="BuildClientApp">
+    <Message Text="Building the SPA..." Importance="high" />
+    <Exec Command="npm run build --quiet" WorkingDirectory="$(SpaRoot)" />
+  </Target>
+
+  <Target BeforeTargets="Build;BuildClientApp" Condition="!Exists('$(SpaRoot)node_modules') And !$(ContainerBuild)" Name="FirstNpmInstall">
+    <Message Text="Restoring npm dependencies..." Importance="High" />
+    <Exec Command="npm ci" WorkingDirectory="$(SpaRoot)" />
+  </Target>
+
+  <Target Name="PublishVueDistFolder" AfterTargets="ComputeFilesToPublish" Condition="!$(ContainerBuild)">
+    <Message Text="Publishing the dist folder..." Importance="High" />
+    <ItemGroup>
+      <DistFiles Include="$(SpaRoot)dist\**" />
+      <ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>%(DistFiles.Identity)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+</Project>

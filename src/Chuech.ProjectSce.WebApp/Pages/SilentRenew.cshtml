@@ -1,0 +1,14 @@
+﻿@page
+@model Chuech.ProjectSce.WebApp.Pages.SilentRenewModel
+@{
+    ViewData["Title"] = "";
+}
+
+@section Scripts {
+    <script src="~/js/oidc-client.min.js"></script>
+    <script>
+        new Oidc.UserManager({ response_type: "code" }).signinSilentCallback().catch(function(e) {
+            console.error(e);
+        });
+    </script>
+}
