@@ -3,29 +3,28 @@ using Chuech.ProjectSce.Core.API.Features.Institutions;
 using Chuech.ProjectSce.Core.API.Features.Institutions.Authorization;
 using Chuech.ProjectSce.Core.API.Features.Subjects.ApiModels;
 
-namespace Chuech.ProjectSce.Core.API.Features.Subjects
+namespace Chuech.ProjectSce.Core.API.Features.Subjects;
+
+public static class GetSubjectById
 {
-    public static class GetSubjectById
+    [UseInstitutionAuthorization]
+    public record Query(int InstitutionId, int SubjectId) : IRequest<SubjectApiModel?>, IInstitutionRequest;
+
+    public class Handler : IRequestHandler<Query, SubjectApiModel?>
     {
-        [UseInstitutionAuthorization]
-        public record Query(int InstitutionId, int SubjectId) : IRequest<SubjectApiModel?>, IInstitutionRequest;
+        private readonly CoreContext _coreContext;
 
-        public class Handler : IRequestHandler<Query, SubjectApiModel?>
+        public Handler(CoreContext coreContext)
         {
-            private readonly CoreContext _coreContext;
+            _coreContext = coreContext;
+        }
 
-            public Handler(CoreContext coreContext)
-            {
-                _coreContext = coreContext;
-            }
-
-            public async Task<SubjectApiModel?> Handle(Query request, CancellationToken cancellationToken)
-            {
-                return await _coreContext.Subjects
-                    .Where(x => x.Id == request.SubjectId && x.InstitutionId == request.InstitutionId)
-                    .MapWith(SubjectApiModel.Mapper)
-                    .FirstOrDefaultAsync(cancellationToken);
-            }
+        public async Task<SubjectApiModel?> Handle(Query request, CancellationToken cancellationToken)
+        {
+            return await _coreContext.Subjects
+                .Where(x => x.Id == request.SubjectId && x.InstitutionId == request.InstitutionId)
+                .MapWith(SubjectApiModel.Mapper)
+                .FirstOrDefaultAsync(cancellationToken);
         }
     }
 }

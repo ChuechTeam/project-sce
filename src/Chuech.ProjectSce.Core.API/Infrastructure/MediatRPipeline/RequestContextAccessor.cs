@@ -1,25 +1,24 @@
-﻿namespace Chuech.ProjectSce.Core.API.Infrastructure.MediatRPipeline
+﻿namespace Chuech.ProjectSce.Core.API.Infrastructure.MediatRPipeline;
+
+public class RequestContextAccessor
 {
-    public class RequestContextAccessor
+    private readonly Dictionary<object, object> _requestToContext = new();
+    private readonly IServiceProvider _serviceProvider;
+
+    public RequestContextAccessor(IServiceProvider serviceProvider)
     {
-        private readonly Dictionary<object, object> _requestToContext = new();
-        private readonly IServiceProvider _serviceProvider;
+        _serviceProvider = serviceProvider;
+    }
 
-        public RequestContextAccessor(IServiceProvider serviceProvider)
+    public RequestContext<T> Get<T>(T request) where T : notnull
+    {
+        if (_requestToContext.TryGetValue(request, out var data))
         {
-            _serviceProvider = serviceProvider;
+            return (RequestContext<T>) data;
         }
 
-        public RequestContext<T> Get<T>(T request) where T : notnull
-        {
-            if (_requestToContext.TryGetValue(request, out var data))
-            {
-                return (RequestContext<T>) data;
-            }
-
-            var requestContext = new RequestContext<T>(_serviceProvider, request);
-            _requestToContext[request] = requestContext;
-            return requestContext;
-        }
+        var requestContext = new RequestContext<T>(_serviceProvider, request);
+        _requestToContext[request] = requestContext;
+        return requestContext;
     }
 }

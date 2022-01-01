@@ -1,6 +1,4 @@
-﻿using Chuech.ProjectSce.Core.API.Data;
-
-namespace Chuech.ProjectSce.Core.API.Features.Spaces.Members;
+﻿namespace Chuech.ProjectSce.Core.API.Features.Spaces.Members;
 
 public record FlattenedSpaceMember(int SpaceId, int[] UserIds, SpaceMemberCategory Category);
 public static class FlattenedSpaceMemberQueryableExtensions
@@ -11,9 +9,9 @@ public static class FlattenedSpaceMemberQueryableExtensions
         (
             x.SpaceId,
             x is UserSpaceMember ?
-                new int[] { ((UserSpaceMember)x).UserId } :
+                new[] { ((UserSpaceMember)x).UserId } :
             x is GroupSpaceMember ?
-                ((GroupSpaceMember)x).Group.Users.Select(x => x.Id).ToArray() : null!,
+                ((GroupSpaceMember)x).Group.Users.Select(u => u.Id).ToArray() : null!,
             x.Category
         ));
     }

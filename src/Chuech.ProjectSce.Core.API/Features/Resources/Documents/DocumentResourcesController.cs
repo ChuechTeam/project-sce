@@ -1,5 +1,4 @@
 ﻿using System.Net.Mime;
-using Chuech.ProjectSce.Core.API.Features.Resources.ApiModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,17 +17,8 @@ public class DocumentResourcesController : ControllerBase
         _mediator = mediator;
     }
 
-    [HttpPost("institutions/{institutionId:int}/resources/documents")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<DocumentResourceApiModel>> Create([FromForm] CreateDocumentResource.Command command,
-        int institutionId)
-    {
-        return await _mediator.Send(command with { InstitutionId = institutionId });
-    }
-
-    [HttpGet("resources/documents/{resourceId:int}/access-link")]
-    public async Task<ActionResult<GeneratedDocumentAccessLink>> GetLink(int resourceId)
+    [HttpGet("resources/documents/{resourceId:guid}/access-link")]
+    public async Task<ActionResult<GeneratedDocumentAccessLink>> GetLink(Guid resourceId)
     {
         return await _mediator.Send(new GetDocumentAccessLink.Query(resourceId));
     }

@@ -5,5 +5,6 @@ public enum ErrorKind
     General,
     AuthorizationFailure,
     AuthenticationFailure,
-    NotFound
+    NotFound,
+    Gone
 }

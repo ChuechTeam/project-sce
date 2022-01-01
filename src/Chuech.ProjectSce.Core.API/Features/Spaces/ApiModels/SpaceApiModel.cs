@@ -1,5 +1,4 @@
-﻿using Chuech.ProjectSce.Core.API.Data;
-using Chuech.ProjectSce.Core.API.Features.Subjects.ApiModels;
+﻿using Chuech.ProjectSce.Core.API.Features.Subjects.ApiModels;
 
 namespace Chuech.ProjectSce.Core.API.Features.Spaces.ApiModels;
 public class SpaceApiModel

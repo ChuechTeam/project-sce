@@ -1,21 +1,22 @@
 ﻿using Chuech.ProjectSce.Core.API.Data;
 using Chuech.ProjectSce.Core.API.Data.Abstractions;
 using Chuech.ProjectSce.Core.API.Features.Spaces.Authorization;
-using Chuech.ProjectSce.Core.API.Infrastructure.DurableCommands;
-using MassTransit;
-using System.Text.Json.Serialization;
 
 namespace Chuech.ProjectSce.Core.API.Features.Spaces.Members;
+
 public static class AddMember
 {
-    public record UserCommand([property: JsonIgnore] int SpaceId, int UserId, SpaceMemberCategory MemberCategory) : IRequest<Unit>;
-    public record GroupCommand([property: JsonIgnore] int SpaceId, int GroupId, SpaceMemberCategory MemberCategory) : IRequest<Unit>;
-    public abstract class CommonHandler<T> : DurableCommandHandler<T, Unit> where T : class, IRequest<Unit>
-    {
-        private readonly AuthBarrier<ISpaceAuthorizationService> _authBarrier;
+    public record UserCommand
+        ([property: JsonIgnore] int SpaceId, int UserId, SpaceMemberCategory MemberCategory) : IRequest<Unit>;
 
-        public CommonHandler(AuthBarrier<ISpaceAuthorizationService> authBarrier,
-            IBus bus, IRequestClient<ProcessDurableCommand<T>> requestClient) : base(bus, requestClient)
+    public record GroupCommand
+        ([property: JsonIgnore] int SpaceId, int GroupId, SpaceMemberCategory MemberCategory) : IRequest<Unit>;
+
+    public abstract class CommonHandler<T> : IRequestHandler<T> where T : class, IRequest<Unit>
+    {
+        private readonly AuthBarrier<SpaceAuthorizationService> _authBarrier;
+
+        public CommonHandler(AuthBarrier<SpaceAuthorizationService> authBarrier)
         {
             _authBarrier = authBarrier;
         }
@@ -26,85 +27,66 @@ public static class AddMember
                 (auth, userId) => auth.AuthorizeAsync(spaceId, userId, SpacePermission.ManageMembers)
             );
         }
+
+        public abstract Task<Unit> Handle(T request, CancellationToken cancellationToken);
     }
+
     public class UserHandler : CommonHandler<UserCommand>
     {
         private readonly CoreContext _coreContext;
 
-        public UserHandler(AuthBarrier<ISpaceAuthorizationService> authBarrier,
-            IBus bus,
-            IRequestClient<ProcessDurableCommand<UserCommand>> requestClient,
-            CoreContext coreContext) : base(authBarrier, bus, requestClient)
+        public UserHandler(AuthBarrier<SpaceAuthorizationService> authBarrier, CoreContext coreContext) : base(
+            authBarrier)
         {
             _coreContext = coreContext;
         }
 
-        protected override async Task<Unit> HandleIdempotently(UserCommand command, Guid requestId)
+        public override async Task<Unit> Handle(UserCommand command, CancellationToken cancellationToken)
         {
-            var (spaceId, memberId, memberCategory) = command;
-            var initiatorId = await GetAuthorizedInitiatorId(spaceId);
+            _ = await GetAuthorizedInitiatorId(command.SpaceId);
 
-            var space = await _coreContext.Spaces.LoadedForEdit().FirstAsync(x => x.Id == spaceId);
+            var space = await _coreContext.Spaces.FirstAsync(x => x.Id == command.SpaceId, cancellationToken);
 
             if (!await _coreContext.InstitutionMembers
-                .AnyAsync(x => x.UserId == memberId && x.InstitutionId == space.InstitutionId))
+                    .AnyAsync(x => x.UserId == command.UserId && x.InstitutionId == space.InstitutionId,
+                        cancellationToken))
             {
                 throw new NotFoundException("User not found.");
             }
 
-            space.AddUserMember(memberId, memberCategory);
-            _coreContext.LogOperation<UserHandler>(requestId);
-
-            try
-            {
-                await _coreContext.SaveChangesAsync();
-            }
-            catch (DuplicateOperationLogException)
-            {
-                // Do nothing!
-            }
-
-            await Bus.Publish(new SpaceMemberAdded(spaceId, memberId, null));
+            space.AddUserMember(command.UserId, command.MemberCategory);
+            await _coreContext.SaveChangesAsync(cancellationToken);
 
             return Unit.Value;
         }
     }
+
     public class GroupHandler : CommonHandler<GroupCommand>
     {
         private readonly CoreContext _coreContext;
 
-        public GroupHandler(AuthBarrier<ISpaceAuthorizationService> authBarrier,
-            IBus bus,
-            IRequestClient<ProcessDurableCommand<GroupCommand>> requestClient,
-            CoreContext coreContext) : base(authBarrier, bus, requestClient)
+        public GroupHandler(AuthBarrier<SpaceAuthorizationService> authBarrier, CoreContext coreContext) : base(
+            authBarrier)
         {
             _coreContext = coreContext;
         }
 
-        protected override async Task<Unit> HandleIdempotently(GroupCommand command, Guid requestId)
+        public override async Task<Unit> Handle(GroupCommand command, CancellationToken cancellationToken)
         {
-            var (spaceId, groupId, memberCategory) = command;
-            var initiatorId = await GetAuthorizedInitiatorId(spaceId);
+            _ = await GetAuthorizedInitiatorId(command.SpaceId);
 
-            var space = await _coreContext.Spaces.LoadedForEdit().FirstAsync(x => x.Id == spaceId);
+            var space = await _coreContext.Spaces.FirstAsync(x => x.Id == command.SpaceId, cancellationToken);
 
-            if (!await _coreContext.Groups.AnyAsync(x => x.Id == groupId && x.InstitutionId == space.InstitutionId))
+            if (!await _coreContext.Groups
+                    .ExcludeSuppressed()
+                    .AnyAsync(x => x.Id == command.GroupId && x.InstitutionId == space.InstitutionId,
+                        cancellationToken))
             {
                 throw new NotFoundException("Group not found.");
             }
 
-            space.AddGroupMember(groupId, memberCategory);
-            _coreContext.LogOperation<UserHandler>(requestId);
-            try
-            {
-                await _coreContext.SaveChangesAsync();
-            }
-            catch (DuplicateOperationLogException)
-            {
-                // Do nothing!
-            }
-
-            await Bus.Publish(new SpaceMemberAdded(spaceId, null, groupId));
+            space.AddGroupMember(command.GroupId, command.MemberCategory);
+            await _coreContext.SaveChangesAsync(cancellationToken);
 
             return Unit.Value;
         }

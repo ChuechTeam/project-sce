@@ -4,6 +4,6 @@ public static class AuthorizationResultTaskExtensions
 {
     public static async Task ThrowIfUnsuccessful<T>(this Task<T> task) where T : AuthorizationResult
     {
-        (await task).ThrowIfUnsuccessful();    
+        (await task).ThrowIfFailed();    
     }
 }

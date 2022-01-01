@@ -1,6 +1,4 @@
-﻿
-using Chuech.ProjectSce.Core.API.Data;
-using Chuech.ProjectSce.Core.API.Features.Users.ApiModels;
+﻿using Chuech.ProjectSce.Core.API.Features.Users.ApiModels;
 using System.Text.Json.Serialization;
 
 namespace Chuech.ProjectSce.Core.API.Features.Groups.ApiModels;

@@ -1,7 +1,6 @@
-﻿namespace Chuech.ProjectSce.Core.API.Features.Institutions
+﻿namespace Chuech.ProjectSce.Core.API.Features.Institutions;
+
+public interface IInstitutionRequest
 {
-    public interface IInstitutionRequest
-    {
-        public int InstitutionId { get; }
-    }
+    public int InstitutionId { get; }
 }

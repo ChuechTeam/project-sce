@@ -1,64 +1,42 @@
-﻿using System.Data;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 
-namespace Chuech.ProjectSce.Core.API.Features.Users
+namespace Chuech.ProjectSce.Core.API.Features.Users;
+
+public interface IAuthenticationService
 {
-    public interface IAuthenticationService
+    int GetUserId();
+    int? GetUserIdOrNull();
+}
+
+public class HttpAuthenticationService : IAuthenticationService
+{
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public HttpAuthenticationService(IHttpContextAccessor httpContextAccessor)
     {
-        bool HasAuthenticationSource { get; }
-        int GetUserId();
-        int? GetUserIdOrNull(bool throwOnMissingSource = true);
+        _httpContextAccessor = httpContextAccessor;
     }
 
-    public class AuthenticationService : IAuthenticationService
+    public int? GetUserIdOrNull()
     {
-        private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly MTRequestAuthenticationContextAccessor _mtRequestAuthAccessor;
-
-        public AuthenticationService(IHttpContextAccessor httpContextAccessor, MTRequestAuthenticationContextAccessor mtRequestAuthAccessor)
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext is not null)
         {
-            _httpContextAccessor = httpContextAccessor;
-            _mtRequestAuthAccessor = mtRequestAuthAccessor;
+            return GetHttpUserId(httpContext.User);
         }
+        
+        throw new InvalidOperationException(
+            "Cannot retrieve the current user as there is no active HttpContext.");
+    }
 
-        public bool HasAuthenticationSource => _httpContextAccessor.HttpContext is not null ||
-            _mtRequestAuthAccessor.AuthenticationContext is not null;
+    public int GetUserId()
+    {
+        return GetUserIdOrNull() ?? throw new InvalidOperationException("The user id is null.");
+    }
 
-        public int? GetUserIdOrNull(bool throwOnMissingSource)
-        {
-            var httpContext = _httpContextAccessor.HttpContext;
-            if (httpContext is not null)
-            {
-                return GetHttpUserId(httpContext.User);
-            }
-
-            var requestContext = _mtRequestAuthAccessor.AuthenticationContext;
-            if (requestContext is not null)
-            {
-                return requestContext.UserId;
-            }
-
-            if (throwOnMissingSource)
-            {
-                throw new InvalidOperationException(
-                    "Cannot retrieve the current user as there is no active HttpContext " +
-                    "or MTRequestAuthenticationContext.");
-            }
-            else
-            {
-                return null;
-            }
-        }
-
-        public int GetUserId()
-        {
-            return GetUserIdOrNull(true) ?? throw new InvalidOperationException("The user id is null.");
-        }
-
-        private int? GetHttpUserId(ClaimsPrincipal? claimsPrincipal)
-        {
-            var value = claimsPrincipal?.Claims.FirstOrDefault(x => x.Type == "public_id")?.Value;
-            return value == null ? null : int.Parse(value);
-        }
+    private static int? GetHttpUserId(ClaimsPrincipal? claimsPrincipal)
+    {
+        var value = claimsPrincipal?.Claims.FirstOrDefault(x => x.Type == "public_id")?.Value;
+        return value == null ? null : int.Parse(value);
     }
 }

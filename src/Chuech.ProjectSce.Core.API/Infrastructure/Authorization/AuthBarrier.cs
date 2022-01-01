@@ -17,12 +17,17 @@ public sealed class AuthBarrier<TAuthorizer>
         _authorizer = authorizer;
     }
 
+    public int GetUserId()
+    {
+        return _authenticationService.GetUserId();
+    }
+    
     public async Task<int> GetAuthorizedUserIdAsync(Func<TAuthorizer, int, Task<AuthorizationResult>> authorizeAsync)
     {
         var userId = _authenticationService.GetUserId();
 
         var authorizationResult = await authorizeAsync(_authorizer, userId);
-        authorizationResult.ThrowIfUnsuccessful();
+        authorizationResult.ThrowIfFailed();
 
         return userId;
     }
@@ -38,7 +43,7 @@ public sealed class AuthBarrier<TAuthorizer>
         }
         else
         {
-            return OperationResult.Failure<int>(authorizationResult.AsError()!);
+            return OperationResult.Failure<int>(authorizationResult.Error!);
         }
     }
 }

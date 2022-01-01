@@ -1,31 +1,31 @@
 ﻿using Chuech.ProjectSce.Core.API.Data;
+using Chuech.ProjectSce.Core.API.Data.Abstractions;
 using Chuech.ProjectSce.Core.API.Features.Institutions.Authorization;
-using EntityFramework.Exceptions.Common;
-using System.Text.Json.Serialization;
+using Polly;
+using Polly.Registry;
 
 namespace Chuech.ProjectSce.Core.API.Features.Groups;
+
 public static class UpdateGroup
 {
-    public record Command([property: JsonIgnore] int GroupId, string Name, int[]? UserIds = null) : IRequest
-    {
-        public int[] UserIds { get; } = UserIds ?? Array.Empty<int>();
-    }
+    public record Command([property: JsonIgnore] int GroupId, string Name) : IRequest;
+
     public class Handler : AsyncRequestHandler<Command>
     {
         private readonly CoreContext _coreContext;
-        private readonly AccessibleUsersFromIdsQuery _accessibleUsersQuery;
-        private readonly AuthBarrier<IInstitutionAuthorizationService> _authBarrier;
+        private readonly AuthBarrier<InstitutionAuthorizationService> _authBarrier;
+        private readonly ChuechPolicyRegistry _policyRegistry;
 
-        public Handler(CoreContext coreContext, 
-            AccessibleUsersFromIdsQuery accessibleUsersQuery, 
-            AuthBarrier<IInstitutionAuthorizationService> authBarrier)
+        public Handler(CoreContext coreContext,
+            AuthBarrier<InstitutionAuthorizationService> authBarrier,
+            ChuechPolicyRegistry policyRegistry)
         {
             _coreContext = coreContext;
-            _accessibleUsersQuery = accessibleUsersQuery;
             _authBarrier = authBarrier;
+            _policyRegistry = policyRegistry;
         }
 
-        protected async override Task Handle(Command request, CancellationToken cancellationToken)
+        protected override async Task Handle(Command request, CancellationToken cancellationToken)
         {
             var group = await _coreContext.Groups.FirstOrDefaultAsync(x => x.Id == request.GroupId, cancellationToken);
             if (group is null)
@@ -33,23 +33,33 @@ public static class UpdateGroup
                 throw new NotFoundException();
             }
 
-            var userId = _authBarrier.GetAuthorizedUserIdAsync(
+            _ = _authBarrier.GetAuthorizedUserIdAsync(
                 (auth, userId) => auth.AuthorizeAsync(group.InstitutionId, userId, InstitutionPermission.ManageGroups)
             );
 
-            // Let's update
-            // TODO: Concurrency
-            group.Name = request.Name;
-            await group.UpdateUsersAsync(request.UserIds, _accessibleUsersQuery);
+            await _policyRegistry.OptimisticConcurrencyPolicy
+                .ExecuteAsync(async _ =>
+                {
+                    group.UpdateName(group.Name);
 
-            try
-            {
-                await _coreContext.SaveChangesAsync(cancellationToken);
-            }
-            catch (UniqueConstraintException)
-            {
-                throw GroupErrors.NameTakenError.AsException();
-            }
+                    try
+                    {
+                        await _coreContext.SaveChangesAsync(cancellationToken);
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        await _coreContext.Entry(group).ReloadAsync(cancellationToken);
+                        throw;
+                    }
+                }, new Context($"{nameof(UpdateGroup)}:{request.GroupId}"));
+        }
+    }
+
+    public class Validator : GroupValidator<Command>
+    {
+        public Validator()
+        {
+            AddNameRule(x => x.Name);
         }
     }
 }

@@ -1,52 +1,57 @@
 ﻿using Chuech.ProjectSce.Core.API.Data;
 using Chuech.ProjectSce.Core.API.Features.Groups.ApiModels;
 using Chuech.ProjectSce.Core.API.Features.Institutions.Authorization;
-using EntityFramework.Exceptions.Common;
-using Newtonsoft.Json;
 
 namespace Chuech.ProjectSce.Core.API.Features.Groups;
 
 public static class CreateGroup
 {
-    public record Command(string Name, [property: JsonIgnore] int InstitutionId, int[]? UserIds = null) : IRequest<GroupApiModel>
+    public record Command(string Name, [property: JsonIgnore] int InstitutionId, int[]? UserIds = null)
+        : IRequest<GroupApiModel>
     {
         public int[] UserIds { get; } = UserIds ?? Array.Empty<int>();
     }
+
     public class Handler : IRequestHandler<Command, GroupApiModel>
     {
         private readonly CoreContext _coreContext;
-        private readonly AccessibleUsersFromIdsQuery _accessibleUsersQuery;
-        private readonly AuthBarrier<IInstitutionAuthorizationService> _authBarrier;
+        private readonly AuthBarrier<InstitutionAuthorizationService> _authBarrier;
+        private readonly GroupUserPresenceValidator _groupUserPresenceValidator;
 
-        public Handler(CoreContext coreContext, AccessibleUsersFromIdsQuery accessibleUsersQuery, 
-            AuthBarrier<IInstitutionAuthorizationService> authBarrier)
+        public Handler(CoreContext coreContext, AuthBarrier<InstitutionAuthorizationService> authBarrier,
+            GroupUserPresenceValidator groupUserPresenceValidator)
         {
             _coreContext = coreContext;
-            _accessibleUsersQuery = accessibleUsersQuery;
             _authBarrier = authBarrier;
+            _groupUserPresenceValidator = groupUserPresenceValidator;
         }
 
         public async Task<GroupApiModel> Handle(Command request, CancellationToken cancellationToken)
         {
-            var userId = await _authBarrier.GetAuthorizedUserIdAsync(
+            _ = await _authBarrier.GetAuthorizedUserIdAsync(
                 (auth, userId) => auth.AuthorizeAsync(request.InstitutionId, userId, InstitutionPermission.ManageGroups)
             );
 
-            var group = new Group(request.InstitutionId, request.Name);
-            await group.UpdateUsersAsync(request.UserIds, _accessibleUsersQuery);
-            _coreContext.Groups.Add(group);
-
-            try
+            if ((await _groupUserPresenceValidator.MayBePresent(request.UserIds, request.InstitutionId))
+                .Any(x => x.Value is false))
             {
-                await _coreContext.SaveChangesAsync(cancellationToken);
-            } catch (UniqueConstraintException)
-            {
-                throw GroupErrors.NameTakenError.AsException();
+                throw Group.Errors.UserCannotEnter.AsException();
             }
 
-            return group.MapWith(GroupApiModel.Mapper(includeUsers: true));
+            var group = new Group(request.InstitutionId, request.Name);
+            _coreContext.Groups.Add(group);
+
+            foreach (var groupUserId in request.UserIds)
+            {
+                _coreContext.GroupUsers.Add(new GroupUser(group, groupUserId));
+            }
+
+            await _coreContext.SaveChangesAsync(cancellationToken);
+
+            return group.MapWith(GroupApiModel.Mapper(includeUsers: false));
         }
     }
+
     public class Validator : GroupValidator<Command>
     {
         public Validator()

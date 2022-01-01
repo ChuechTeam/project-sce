@@ -14,10 +14,12 @@ public static class GetInstitutionInvitationById
     public class Handler : IRequestHandler<Query, DetailedInvitationApiModel?>
     {
         private readonly CoreContext _coreContext;
+        private IClock _clock;
 
-        public Handler(CoreContext coreContext)
+        public Handler(CoreContext coreContext, IClock clock)
         {
             _coreContext = coreContext;
+            _clock = clock;
         }
 
         public async Task<DetailedInvitationApiModel?> Handle(Query request,
@@ -26,7 +28,7 @@ public static class GetInstitutionInvitationById
             var normalizedId = Invitation.NormalizeId(request.InvitationId);
 
             return await _coreContext.Invitations
-                .FilterValid()
+                .FilterValid(_clock)
                 .Where(x => x.Id == normalizedId)
                 .MapWith(DetailedInvitationApiModel.Mapper)
                 .FirstOrDefaultAsync(cancellationToken);

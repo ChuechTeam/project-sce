@@ -4,34 +4,41 @@
         <TargetFramework>net6.0</TargetFramework>
         <Nullable>Enable</Nullable>
         <LangVersion>preview</LangVersion>
-		<EnablePreviewFeatures>True</EnablePreviewFeatures>
         <UserSecretsId>0ed30f90-2108-4b2c-99b9-652e48963583</UserSecretsId>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
         <DockerComposeProjectPath>..\docker-compose.dcproj</DockerComposeProjectPath>
-		<ImplicitUsings>True</ImplicitUsings>
+		<ImplicitUsings>enable</ImplicitUsings>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="EFCore.NamingConventions" Version="6.0.0-rc.1" />
-        <PackageReference Include="EntityFrameworkCore.Exceptions.PostgreSQL" Version="3.1.4" />
-        <PackageReference Include="FluentValidation.AspNetCore" Version="10.3.3" />
-        <PackageReference Include="Grpc.AspNetCore" Version="2.39.0" />
-        <PackageReference Include="IdentityModel.AspNetCore.OAuth2Introspection" Version="5.1.0" />
-        <PackageReference Include="MassTransit.AspNetCore" Version="7.2.3-develop.241" />
-        <PackageReference Include="MassTransit.RabbitMQ" Version="7.2.3-develop.241" />
-        <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="9.0.0" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.0-rc.1.21452.10">
+        <PackageReference Include="EFCore.NamingConventions" Version="6.0.*" />
+        <PackageReference Include="EntityFrameworkCore.Exceptions.PostgreSQL" Version="3.1.*" />
+        <PackageReference Include="FluentValidation.AspNetCore" Version="10.3.*" />
+        <PackageReference Include="Grpc.AspNetCore" Version="2.39.*" />
+        <PackageReference Include="IdentityModel.AspNetCore.OAuth2Introspection" Version="5.1.*" />
+        <PackageReference Include="MassTransit.AspNetCore" Version="7.3.0-develop.293" />
+        <PackageReference Include="MassTransit.EntityFrameworkCore" Version="7.3.0-develop.293" />
+        <PackageReference Include="MassTransit.RabbitMQ" Version="7.3.0-develop.293" />
+        <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="9.0.*" />
+        <PackageReference Include="MicroElements.Swashbuckle.NodaTime" Version="4.0.*" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.*">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="6.0.1" />
         <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.10.13" />
-        <PackageReference Include="MimeTypeMapOfficial" Version="1.0.17" />
+        <PackageReference Include="MimeTypeMapOfficial" Version="1.0.*" />
+        <PackageReference Include="Minio" Version="3.1.*" />
+        <PackageReference Include="NodaTime.Serialization.JsonNet" Version="3.0.*" />
+        <PackageReference Include="NodaTime.Serialization.SystemTextJson" Version="1.0.*" />
         <PackageReference Include="NotSoAutoMapper" Version="3.0.0-preview5" />
-        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.0-rc.1" />
-        <PackageReference Include="StackExchange.Redis" Version="2.2.50" />
-        <PackageReference Include="System.Runtime.Experimental" Version="6.0.0-preview.7.*" />
-        <PackageReference Include="Serilog.AspNetCore" Version="4.1.0" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.2" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.*" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL.NodaTime" Version="6.0.*" />
+        <PackageReference Include="Scrutor" Version="3.3.0" />
+        <PackageReference Include="Serilog.Sinks.Seq" Version="5.1.0" />
+        <PackageReference Include="StackExchange.Redis" Version="2.2.*" />
+        <PackageReference Include="Serilog.AspNetCore" Version="4.1.*" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.*" />
     </ItemGroup>
 
     <ItemGroup>
@@ -44,7 +51,7 @@
     </ItemGroup>
     
     <ItemGroup>
-      <Folder Include="Features\Files\Migrations" />
+      <Folder Include="Migrations" />
     </ItemGroup>
 
 </Project>

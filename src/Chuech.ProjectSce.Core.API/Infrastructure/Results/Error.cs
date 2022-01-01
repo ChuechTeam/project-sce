@@ -7,5 +7,5 @@ public sealed record Error(
     object? AdditionalInfo = null)
 {
     public ProjectSceException AsException() => new(this);
-    public OperationResult<T> AsOperationResult<T>() => new(this);
+    public ProjectSceException AsException(Exception innerException) => new(this, innerException);
 }

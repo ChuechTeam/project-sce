@@ -1,6 +1,5 @@
 ﻿using Chuech.ProjectSce.Core.API.Features.Spaces.ApiModels;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Chuech.ProjectSce.Core.API.Features.Spaces;

@@ -1,8 +1,6 @@
 ﻿using Chuech.ProjectSce.Core.API.Data;
 using Chuech.ProjectSce.Core.API.Features.Spaces.ApiModels;
 using Chuech.ProjectSce.Core.API.Features.Spaces.Authorization;
-using Chuech.ProjectSce.Core.API.Features.Spaces.Members;
-using Chuech.ProjectSce.Core.API.Features.Users;
 
 namespace Chuech.ProjectSce.Core.API.Features.Spaces;
 
@@ -12,9 +10,9 @@ public static class GetSpaceById
     public class Handler : IRequestHandler<Query, SpaceApiModel?>
     {
         private readonly CoreContext _context;
-        private readonly AuthBarrier<ISpaceAuthorizationService> _authBarrier;
+        private readonly AuthBarrier<SpaceAuthorizationService> _authBarrier;
 
-        public Handler(CoreContext context, AuthBarrier<ISpaceAuthorizationService> authBarrier)
+        public Handler(CoreContext context, AuthBarrier<SpaceAuthorizationService> authBarrier)
         {
             _context = context;
             _authBarrier = authBarrier;

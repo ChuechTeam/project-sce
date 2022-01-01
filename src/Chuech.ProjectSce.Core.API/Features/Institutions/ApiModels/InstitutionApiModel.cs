@@ -1,16 +1,13 @@
-﻿using Chuech.ProjectSce.Core.API.Data;
+﻿namespace Chuech.ProjectSce.Core.API.Features.Institutions.ApiModels;
 
-namespace Chuech.ProjectSce.Core.API.Features.Institutions.ApiModels
+public class InstitutionApiModel
 {
-    public class InstitutionApiModel
+    public static readonly Mapper<Institution, InstitutionApiModel> Mapper = new(x => new InstitutionApiModel
     {
-        public static readonly Mapper<Institution, InstitutionApiModel> Mapper = new(x => new InstitutionApiModel
-        {
-            Id = x.Id,
-            Name = x.Name
-        });
+        Id = x.Id,
+        Name = x.Name
+    });
 
-        public int Id { get; set; }
-        public string Name { get; set; } = null!;
-    }
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
 }

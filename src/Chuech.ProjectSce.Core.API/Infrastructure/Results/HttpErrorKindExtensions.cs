@@ -14,6 +14,7 @@ public static class HttpErrorKindExtensions
             ErrorKind.AuthenticationFailure => HttpStatusCode.Unauthorized,
             ErrorKind.AuthorizationFailure => HttpStatusCode.Forbidden,
             ErrorKind.NotFound => HttpStatusCode.NotFound,
+            ErrorKind.Gone => HttpStatusCode.Gone,
             _ => throw new ArgumentException($"Unknown error kind: {errorKind}", nameof(errorKind))
         };
     }

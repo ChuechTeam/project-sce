@@ -1,5 +1,4 @@
-﻿using Chuech.ProjectSce.Core.API.Data;
-using Chuech.ProjectSce.Core.API.Features.Groups.ApiModels;
+﻿using Chuech.ProjectSce.Core.API.Features.Groups.ApiModels;
 
 namespace Chuech.ProjectSce.Core.API.Features.Spaces.Members.ApiModels;
 

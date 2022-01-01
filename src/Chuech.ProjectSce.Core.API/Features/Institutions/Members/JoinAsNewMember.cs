@@ -2,8 +2,8 @@
 using Chuech.ProjectSce.Core.API.Features.Invitations;
 using Chuech.ProjectSce.Core.API.Features.Users;
 using EntityFramework.Exceptions.Common;
-using Newtonsoft.Json;
 using Polly;
+using Polly.Registry;
 
 namespace Chuech.ProjectSce.Core.API.Features.Institutions.Members;
 
@@ -17,17 +17,24 @@ public static class JoinAsNewMember
     {
         private readonly IAuthenticationService _authenticationService;
         private readonly CoreContext _coreContext;
-        private readonly IInstitutionGatewayService _institutionGatewayService;
+        private readonly InstitutionGatewayService _institutionGatewayService;
         private readonly ILogger<Handler> _logger;
+        private readonly ChuechPolicyRegistry _policyRegistry;
+        private readonly IClock _clock;
 
         public Handler(CoreContext coreContext,
             IAuthenticationService authenticationService,
-            ILogger<Handler> logger, IInstitutionGatewayService institutionGatewayService)
+            ILogger<Handler> logger,
+            InstitutionGatewayService institutionGatewayService,
+            IClock clock,
+            ChuechPolicyRegistry policyRegistry)
         {
             _coreContext = coreContext;
             _authenticationService = authenticationService;
             _logger = logger;
             _institutionGatewayService = institutionGatewayService;
+            _clock = clock;
+            _policyRegistry = policyRegistry;
         }
 
         public async Task<Result> Handle(Command request, CancellationToken cancellationToken)
@@ -36,19 +43,13 @@ public static class JoinAsNewMember
             var userId = _authenticationService.GetUserId();
 
             _logger.LogInformation(
-                "Attempting to use invitation {InstitutionId} in institution {InstitutionId} by user {UserId}",
+                "Attempting to use invitation {InvitationId} in institution {InstitutionId} by user {UserId}",
                 invitationId, institutionId, userId);
 
-            var concurrencyRetryPolicy = Policy
-                .Handle<DbUpdateConcurrencyException>()
-                .RetryAsync(5,
-                    onRetry: (_, count) =>
-                    {
-                        _logger.LogInformation("Optimistic concurrency failure (retry #{RetryCount})", count);
-                    });
+            var context = new Context($"{nameof(JoinAsNewMember)}:inv-{invitationId}:usr-{userId}");
 
-            return await concurrencyRetryPolicy
-                .ExecuteAsync(() => TryToJoin(invitationId, institutionId, userId, cancellationToken));
+            return await _policyRegistry.OptimisticConcurrencyPolicy
+                .ExecuteAsync(_ => TryToJoin(invitationId, institutionId, userId, cancellationToken), context);
         }
 
         private async Task<Result> TryToJoin(string? invitationId, int institutionId, int userId,
@@ -57,7 +58,7 @@ public static class JoinAsNewMember
             _coreContext.ChangeTracker.Clear();
 
             var invitation = await _coreContext.Invitations
-                .FilterValid()
+                .FilterValid(_clock)
                 .Where(x => x.Id == invitationId && x.InstitutionId == institutionId)
                 .Include(x => x.Institution)
                 .FirstOrDefaultAsync(cancellationToken);
@@ -88,7 +89,8 @@ public static class JoinAsNewMember
             CancellationToken cancellationToken)
         {
             invitation.ConsumeOneUsage();
-            await _institutionGatewayService.JoinAsync(invitation.Institution, userId, InstitutionRole.None, EducationalRole.Student);
+            await _institutionGatewayService.JoinAsync(invitation.Institution, userId, InstitutionRole.None,
+                EducationalRole.Student);
 
             try
             {

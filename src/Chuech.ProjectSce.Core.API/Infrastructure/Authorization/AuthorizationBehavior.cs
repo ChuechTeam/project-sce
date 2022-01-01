@@ -25,7 +25,7 @@ public abstract class AuthorizationBehavior<TRequest, TResponse> : IPipelineBeha
         }
 
         var result = await AuthorizeAsync(request, actualUserId, cancellationToken);
-        result.ThrowIfUnsuccessful();
+        result.ThrowIfFailed();
 
         return await next();
     }

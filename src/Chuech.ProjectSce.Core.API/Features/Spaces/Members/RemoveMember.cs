@@ -1,95 +1,89 @@
 ﻿using Chuech.ProjectSce.Core.API.Data;
-using Chuech.ProjectSce.Core.API.Data.Abstractions;
 using Chuech.ProjectSce.Core.API.Features.Spaces.Authorization;
-using Chuech.ProjectSce.Core.API.Infrastructure.DurableCommands;
+using Chuech.ProjectSce.Core.API.Features.Spaces.Members.Commands;
 using MassTransit;
 
 namespace Chuech.ProjectSce.Core.API.Features.Spaces.Members;
+
 public static class RemoveMember
 {
-    public record UserCommand(int SpaceId, int UserId) : IRequest<Unit>;
-    public record GroupCommand(int SpaceId, int GroupId) : IRequest<Unit>;
-    public class GenericRemover
+    public interface ICommonCommand : IRequest<OperationResult>
     {
-        private readonly AuthBarrier<ISpaceAuthorizationService> _authBarrier;
-        private readonly CoreContext _coreContext;
-        private readonly IBus _bus;
+        public int SpaceId { get; }
+    }
 
-        public GenericRemover(AuthBarrier<ISpaceAuthorizationService> authBarrier, CoreContext coreContext, IBus bus)
+    public record UserCommand(int SpaceId, int UserId) : ICommonCommand;
+
+    public record GroupCommand(int SpaceId, int GroupId) : ICommonCommand;
+
+    public abstract class CommonHandler<T> : IRequestHandler<T, OperationResult> where T : ICommonCommand
+    {
+        private readonly IRequestClient<RemoveSpaceMember> _requestClient;
+        private readonly AuthBarrier<SpaceAuthorizationService> _authBarrier;
+        protected CoreContext CoreContext { get; }
+
+        public CommonHandler(IRequestClient<RemoveSpaceMember> requestClient,
+            AuthBarrier<SpaceAuthorizationService> authBarrier, CoreContext coreContext)
         {
+            _requestClient = requestClient;
             _authBarrier = authBarrier;
-            _coreContext = coreContext;
-            _bus = bus;
+            CoreContext = coreContext;
         }
 
-        public async Task Remove(int spaceId, Func<SpaceMember, bool> memberPredicate, Guid requestId)
+        public async Task<OperationResult> Handle(T request, CancellationToken cancellationToken)
         {
-            var initiatorId = _authBarrier.GetAuthorizedUserIdAsync(
-                (auth, userId) => auth.AuthorizeAsync(spaceId, userId, SpacePermission.ManageMembers)
+            _ = _authBarrier.GetAuthorizedUserIdAsync(
+                (auth, userId) => auth.AuthorizeAsync(request.SpaceId, userId, SpacePermission.ManageMembers)
             );
 
-            var space = await _coreContext.Spaces.LoadedForEdit().FirstAsync(x => x.Id == spaceId);
-            var member = space.Members.FirstOrDefault(memberPredicate);
-            if (member is null)
+            var memberId = await FindMemberId(request);
+            if (memberId == default)
             {
-                throw new NotFoundException("Member not found.");
+                throw new NotFoundException();
             }
 
-            space.RemoveMember(member.Id);
-            _coreContext.LogOperation<GenericRemover>(requestId);
+            Response response = await _requestClient.GetResponse(
+                new RemoveSpaceMember(request.SpaceId, memberId, false), cancellationToken);
 
-            try
-            {
-                await _coreContext.SaveChangesAsync();
-            }
-            catch (DuplicateOperationLogException)
-            {
-                // Idempotency; ignore.
-            }
+            return response is not (_, RemoveSpaceMember.Failure failure) ? 
+                OperationResult.Success() : 
+                OperationResult.Failure(failure.Error);
+        }
 
-            await _bus.Publish(
-                new SpaceMemberRemoved(space.Id,
-                    (member as UserSpaceMember)?.UserId,
-                    (member as GroupSpaceMember)?.GroupId)
-           );
+        protected abstract Task<int> FindMemberId(T command);
+    }
+
+    public class GroupHandler : CommonHandler<GroupCommand>
+    {
+        public GroupHandler(IRequestClient<RemoveSpaceMember> requestClient,
+            AuthBarrier<SpaceAuthorizationService> authBarrier, CoreContext coreContext) : base(requestClient,
+            authBarrier, coreContext)
+        {
+        }
+
+        protected override Task<int> FindMemberId(GroupCommand command)
+        {
+            return CoreContext.SpaceMembers.OfType<GroupSpaceMember>()
+                .Where(x => x.Space.Id == command.SpaceId && x.GroupId == command.GroupId)
+                .Select(x => x.Id)
+                .FirstOrDefaultAsync();
         }
     }
-    public class UserHandler : DurableCommandHandler<UserCommand, Unit>
+
+    public class UserHandler : CommonHandler<UserCommand>
     {
-        private readonly GenericRemover _genericRemover;
-
-        public UserHandler(GenericRemover genericRemover,
-            IBus bus, IRequestClient<ProcessDurableCommand<UserCommand>> requestClient) : base(bus, requestClient)
+        public UserHandler(IRequestClient<RemoveSpaceMember> requestClient,
+            AuthBarrier<SpaceAuthorizationService> authBarrier, CoreContext coreContext) : base(requestClient,
+            authBarrier, coreContext)
         {
-            _genericRemover = genericRemover;
         }
 
-        protected override async Task<Unit> HandleIdempotently(UserCommand command, Guid requestId)
+        protected override Task<int> FindMemberId(UserCommand command)
         {
-            await _genericRemover.Remove(command.SpaceId,
-                x => x is UserSpaceMember userMember && userMember.UserId == command.UserId,
-                requestId);
-
-            return Unit.Value;
-        }
-    }
-    public class GroupHandler : DurableCommandHandler<GroupCommand, Unit>
-    {
-        private readonly GenericRemover _genericRemover;
-
-        public GroupHandler(GenericRemover genericRemover,
-            IBus bus, IRequestClient<ProcessDurableCommand<GroupCommand>> requestClient) : base(bus, requestClient)
-        {
-            _genericRemover = genericRemover;
-        }
-
-        protected override async Task<Unit> HandleIdempotently(GroupCommand command, Guid requestId)
-        {
-            await _genericRemover.Remove(command.SpaceId,
-                x => x is GroupSpaceMember groupMember && groupMember.GroupId == command.GroupId,
-                requestId);
-
-            return Unit.Value;
+            return CoreContext.SpaceMembers.OfType<UserSpaceMember>()
+                .Where(x => x.Space.Id == command.SpaceId && x.UserId == command.UserId)
+                .Select(x => x.Id)
+                .FirstOrDefaultAsync();
         }
     }
 }

@@ -1,6 +1,5 @@
-﻿namespace Chuech.ProjectSce.Core.API.Data.Abstractions
+﻿namespace Chuech.ProjectSce.Core.API.Data.Abstractions;
+
+public interface IFullyDatedEntity : IHaveCreationDate, IHaveLastEditDate
 {
-    public interface IFullyDatedEntity : IHaveCreationDate, IHaveLastEditDate
-    {
-    }
 }

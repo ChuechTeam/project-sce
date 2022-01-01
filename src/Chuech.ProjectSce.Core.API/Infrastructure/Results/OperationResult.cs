@@ -14,7 +14,7 @@ public readonly struct OperationResult
 
     private OperationResult(Error? error) { Error = error; }
 
-    public bool IsSuccess => Error is not null;
+    public bool IsSuccess => Error is null;
 
     public void ThrowIfFailed()
     {
@@ -24,7 +24,7 @@ public readonly struct OperationResult
         }
     }
 
-    public bool TryGetError([MaybeNullWhen(false)] out Error error)
+    public bool Failed([MaybeNullWhen(false)] out Error error)
     {
         if (!IsSuccess)
         {
@@ -67,7 +67,7 @@ public readonly struct OperationResult<T>
         throw Error!.AsException();
     }
 
-    public bool TryGetValue([MaybeNullWhen(false)] out T value)
+    public bool Successful([MaybeNullWhen(false)] out T value)
     {
         if (IsSuccess)
         {
@@ -81,7 +81,7 @@ public readonly struct OperationResult<T>
         }
     }
 
-    public bool TryGetValue([MaybeNullWhen(false)] out T value, [MaybeNullWhen(true)] out Error error)
+    public bool Successful([MaybeNullWhen(false)] out T value, [MaybeNullWhen(true)] out Error error)
     {
         if (IsSuccess)
         {
@@ -97,7 +97,7 @@ public readonly struct OperationResult<T>
         }
     }
 
-    public bool TryGetError([MaybeNullWhen(false)] out Error error)
+    public bool Failed([MaybeNullWhen(false)] out Error error)
     {
         if (IsSuccess)
         {
@@ -110,4 +110,7 @@ public readonly struct OperationResult<T>
             return false;
         }
     }
+
+    public OperationResult WithoutResult()
+        => Error is null ? OperationResult.Success() : OperationResult.Failure(Error);
 }

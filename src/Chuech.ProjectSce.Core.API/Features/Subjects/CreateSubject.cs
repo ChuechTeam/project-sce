@@ -1,5 +1,4 @@
-﻿using System.Text.Json.Serialization;
-using Chuech.ProjectSce.Core.API.Data;
+﻿using Chuech.ProjectSce.Core.API.Data;
 using Chuech.ProjectSce.Core.API.Features.Institutions;
 using Chuech.ProjectSce.Core.API.Features.Institutions.Authorization;
 using Chuech.ProjectSce.Core.API.Features.Subjects.ApiModels;

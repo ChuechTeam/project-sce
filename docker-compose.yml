@@ -33,3 +33,11 @@ services:
 
   redis:
     image: "redis:6.2.5"
+    
+  minio:
+    image: "quay.io/minio/minio"
+    
+  seq:
+    image: datalust/seq
+    environment:
+      - ACCEPT_EULA=Y

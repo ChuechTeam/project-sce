@@ -1,6 +1,4 @@
-﻿using System.Runtime.Serialization;
-
-namespace Chuech.ProjectSce.Core.API.Data;
+﻿namespace Chuech.ProjectSce.Core.API.Data;
 
 public class DuplicateOperationLogException : Exception
 {

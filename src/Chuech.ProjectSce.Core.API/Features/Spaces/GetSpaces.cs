@@ -1,8 +1,6 @@
 ﻿using Chuech.ProjectSce.Core.API.Data;
-using Chuech.ProjectSce.Core.API.Features.Institutions.Authorization;
 using Chuech.ProjectSce.Core.API.Features.Spaces.ApiModels;
 using Chuech.ProjectSce.Core.API.Features.Spaces.Authorization;
-using Chuech.ProjectSce.Core.API.Features.Spaces.Members;
 using Chuech.ProjectSce.Core.API.Features.Users;
 
 namespace Chuech.ProjectSce.Core.API.Features.Spaces;
@@ -14,9 +12,9 @@ public static class GetSpaces
     {
         private readonly CoreContext _context;
         private readonly IAuthenticationService _authenticationService;
-        private readonly ISpaceAuthorizationService _spaceAuthorizationService;
+        private readonly SpaceAuthorizationService _spaceAuthorizationService;
 
-        public Handler(CoreContext context, IAuthenticationService authenticationService, ISpaceAuthorizationService spaceAuthorizationService)
+        public Handler(CoreContext context, IAuthenticationService authenticationService, SpaceAuthorizationService spaceAuthorizationService)
         {
             _context = context;
             _authenticationService = authenticationService;

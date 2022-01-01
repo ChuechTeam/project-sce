@@ -1,45 +1,56 @@
-﻿using Chuech.ProjectSce.Core.API.Infrastructure.Exceptions;
+﻿using System.Diagnostics.CodeAnalysis;
 
 namespace Chuech.ProjectSce.Core.API.Infrastructure.Authorization;
 
 public abstract record AuthorizationResult(bool IsSuccess)
 {
-    public void ThrowIfUnsuccessful()
+    public void ThrowIfFailed()
     {
-        var error = AsError();
+        var error = Error;
         if (error is not null)
         {
             throw error.AsException();
         }
     }
-    public abstract Error? AsError();
+
+    public bool Failed([NotNullWhen(true)] out Error? error)
+    {
+        error = Error;
+        return error is not null;
+    }
+
+    public abstract Error? Error { get; }
 
     public static SuccessAuthorizationResult Success => new();
-    public static AwareForbiddenAuthorizationResult AwareFobidden(string Reason, string ErrorCode) => new(Reason, ErrorCode);
-    public static HiddenForbiddenAuthorizationResult HiddenForbidden(string? ErrorMessage = null) => new(ErrorMessage);
+    public static HiddenForbiddenAuthorizationResult HiddenForbidden => new();
+    public static AwareForbiddenAuthorizationResult AwareForbidden(Error error) => new(error);
+    public static AwareOtherAuthorizationResult AwareOther(Error error) => new(error);
 }
 
 public sealed record SuccessAuthorizationResult() : AuthorizationResult(true)
 {
-    public override Error? AsError()
-    {
-        return null;
-    }
+    public override Error? Error => null;
 }
 
-public sealed record AwareForbiddenAuthorizationResult(string Reason, string ErrorCode)
-    : AuthorizationResult(false)
+public sealed record HiddenForbiddenAuthorizationResult() : AuthorizationResult(false)
 {
-    public override Error AsError()
-    {
-        return new Error(Reason, ErrorCode, ErrorKind.AuthorizationFailure);
-    }
+    private static readonly Error s_error = new(Kind: ErrorKind.NotFound);
+
+    public override Error Error => s_error;
 }
 
-public sealed record HiddenForbiddenAuthorizationResult(string? ErrorMessage = null) : AuthorizationResult(false)
+public sealed record AwareForbiddenAuthorizationResult
+    : AuthorizationResult
 {
-    public override Error AsError()
+    public AwareForbiddenAuthorizationResult(Error originalError) : base(false)
     {
-        return new Error(ErrorMessage, Kind: ErrorKind.NotFound);
+        Error = originalError with { Kind = ErrorKind.AuthorizationFailure };
     }
+
+    public override Error Error { get; }
+}
+
+public sealed record AwareOtherAuthorizationResult(Error Error) : AuthorizationResult(false)
+{
+    public override Error Error { get; } = Error;
 }

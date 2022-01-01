@@ -11,15 +11,15 @@ public static class GetMembers
     public class Handler : IRequestHandler<Query, Result>
     {
         private readonly CoreContext _coreContext;
-        private readonly AuthBarrier<ISpaceAuthorizationService> _authBarrier;
+        private readonly AuthBarrier<SpaceAuthorizationService> _authBarrier;
 
-        public Handler(CoreContext coreContext, AuthBarrier<ISpaceAuthorizationService> authBarrier)
+        public Handler(CoreContext coreContext, AuthBarrier<SpaceAuthorizationService> authBarrier)
         {
             _coreContext = coreContext;
             _authBarrier = authBarrier;
         }
 
-        private static readonly Expression<Func<Space, Result>> _spaceProjection = ((Expression<Func<Space, Result>>)(x => new Result
+        private static readonly Expression<Func<Space, Result>> s_spaceProjection = ((Expression<Func<Space, Result>>)(x => new Result
         {
             Groups = x.Members.OfType<GroupSpaceMember>().MapWith(GroupSpaceMemberApiModel.Mapper).ToArray(),
             Users = x.Members.OfType<UserSpaceMember>().MapWith(UserSpaceMemberApiModel.Mapper).ToArray(),
@@ -33,7 +33,7 @@ public static class GetMembers
 
             return await _coreContext.Spaces
                 .Where(x => x.Id == request.SpaceId)
-                .Select(_spaceProjection)
+                .Select(s_spaceProjection)
                 .FirstAsync(cancellationToken);
         }
     }

@@ -2,7 +2,8 @@
 using System;
 using System.Text.Json;
 using Chuech.ProjectSce.Core.API.Data;
-using Chuech.ProjectSce.Core.API.Data.Resources;
+using Chuech.ProjectSce.Core.API.Features.Institutions;
+using Chuech.ProjectSce.Core.API.Features.Resources;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;

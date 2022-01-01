@@ -1,7 +1,6 @@
-﻿namespace Chuech.ProjectSce.Core.API.Data.Abstractions
+﻿namespace Chuech.ProjectSce.Core.API.Data.Abstractions;
+
+public interface IHaveLastEditDate
 {
-    public interface IHaveLastEditDate
-    {
-        DateTime LastEditDate { get; set; }
-    }
+    Instant LastEditDate { get; set; }
 }

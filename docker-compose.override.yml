@@ -48,11 +48,14 @@ services:
       - IdentityUrlInternal=http://identity
       - IdentityGrpcUrl=http://identity:751
       - ConnectionStrings__Core=Host=sqldb;Database=ProjectSce.Core;Username=postgres;Password=${SQL_DEV_PASSWORD}
-      - ConnectionStrings__FileStorage=Host=sqldb;Database=ProjectSce.FileStorage;Username=postgres;Password=${SQL_DEV_PASSWORD}
       - ConnectionStrings__Redis=redis
       - RabbitMQHost=event-bus
       - RabbitMQUser=${RABBITMQ_DEV_USER}
       - RabbitMQPassword=${RABBITMQ_DEV_PASSWORD}
+      - MinioUrl=minio:9000
+      - MinioUser=${MINIO_DEV_USER}
+      - MinioPassword=${MINIO_DEV_PASSWORD}
+      - SeqUrl=http://seq:5341
       - FileStorage__Location=/app/files
     ports:
       - "80"
@@ -60,7 +63,7 @@ services:
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
       - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
-      - ./DevData/core/files:/app/files
+      - ./DevData/core/files:/app/files:delegated
   sqldb:
     environment:
       POSTGRES_PASSWORD: ${SQL_DEV_PASSWORD}
@@ -68,6 +71,7 @@ services:
       - ./DevData/sqldb_postgres:/var/lib/postgresql/data
     ports:
       - "6600:5432"
+  
   event-bus:
     hostname: "chuech"
     environment:
@@ -77,4 +81,26 @@ services:
       - "5672:5672"
       - "15672:15672"
     volumes:
-    - ./DevData/RabbitMQ:/var/lib/rabbitmq/mnesia/
+      - ./DevData/RabbitMQ:/var/lib/rabbitmq/mnesia/:delegated
+  
+  # To get Minio presigned URLs working on your machine, add the following line in your hosts file:
+  # 127.0.0.1 minio
+  # (See issue https://github.com/minio/minio-js/issues/514)
+  minio:
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000"
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_DEV_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_DEV_PASSWORD}
+    volumes:
+      - ./DevData/Minio:/data
+
+  seq:
+    volumes:
+      - ./DevData/Seq:/data
+    ports:
+      - "6700:80"
+      - "5341"

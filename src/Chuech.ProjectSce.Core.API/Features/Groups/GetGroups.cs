@@ -1,4 +1,5 @@
 ﻿using Chuech.ProjectSce.Core.API.Data;
+using Chuech.ProjectSce.Core.API.Data.Abstractions;
 using Chuech.ProjectSce.Core.API.Features.Groups.ApiModels;
 using Chuech.ProjectSce.Core.API.Features.Institutions;
 using Chuech.ProjectSce.Core.API.Features.Institutions.Authorization;
@@ -21,6 +22,7 @@ public static class GetGroups
         {
             // TODO: Security, should some users not be able to view groups?
             return await _coreContext.Groups
+                .ExcludeSuppressed()
                 .Where(x => x.InstitutionId == request.InstitutionId)
                 .MapWith(GroupApiModel.Mapper(request.IncludeUsers))
                 .ToArrayAsync(cancellationToken);

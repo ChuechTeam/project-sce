@@ -1,5 +1,4 @@
-﻿using Chuech.ProjectSce.Core.API.Data;
-using Chuech.ProjectSce.Core.API.Features.Spaces.Members;
+﻿using Chuech.ProjectSce.Core.API.Features.Spaces.Members;
 
 namespace Chuech.ProjectSce.Core.API.Features.Spaces.Authorization;
 

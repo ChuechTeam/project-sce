@@ -1,6 +1,4 @@
-﻿using System.Net;
-
-namespace Chuech.ProjectSce.Core.API.Infrastructure.Exceptions;
+﻿namespace Chuech.ProjectSce.Core.API.Infrastructure.Exceptions;
 
 public class NotFoundException : ProjectSceException
 {

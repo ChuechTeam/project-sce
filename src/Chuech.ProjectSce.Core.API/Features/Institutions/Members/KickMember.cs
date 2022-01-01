@@ -1,90 +1,90 @@
 ﻿using Chuech.ProjectSce.Core.API.Data;
 using Chuech.ProjectSce.Core.API.Features.Institutions.Authorization;
+using Chuech.ProjectSce.Core.API.Features.Institutions.Members.Commands;
 using Chuech.ProjectSce.Core.API.Features.Users;
+using MassTransit;
 
 namespace Chuech.ProjectSce.Core.API.Features.Institutions.Members;
 
 public static class KickMember
 {
-    // The permission is checked manually, as the user can kick themselves without
-    // requiring the KickMember permission.
-    [UseInstitutionAuthorization]
     public record Command(int InstitutionId, int UserToKickId)
-        : IRequest, IInstitutionRequest;
+        : IRequest<OperationResult>, IInstitutionRequest;
 
-    public class Handler : IRequestHandler<Command>
+    public class Handler : IRequestHandler<Command, OperationResult>
     {
         private readonly CoreContext _coreContext;
-        private readonly ILogger<Handler> _logger;
-        private readonly IInstitutionAuthorizationService _institutionAuthorizationService;
+        private readonly InstitutionAuthorizationService _institutionAuthorizationService;
         private readonly IAuthenticationService _authenticationService;
+        private readonly IRequestClient<RemoveInstitutionMember> _removeMemberClient;
 
         public Handler(CoreContext coreContext,
-            ILogger<Handler> logger,
-            IInstitutionAuthorizationService institutionAuthorizationService,
-            IAuthenticationService authenticationService)
+            InstitutionAuthorizationService institutionAuthorizationService,
+            IAuthenticationService authenticationService,
+            IRequestClient<RemoveInstitutionMember> removeMemberClient)
         {
             _coreContext = coreContext;
-            _logger = logger;
             _institutionAuthorizationService = institutionAuthorizationService;
             _authenticationService = authenticationService;
+            _removeMemberClient = removeMemberClient;
         }
 
-        public async Task<Unit> Handle(Command request, CancellationToken cancellationToken)
+        public async Task<OperationResult> Handle(Command request, CancellationToken cancellationToken)
         {
-            var kickerUserId = _authenticationService.GetUserId();
-            var kicker = await _coreContext.InstitutionMembers.FindByPairAsync(kickerUserId, request.InstitutionId, cancellationToken)
-                ?? throw new NotFoundException("Institution not found.");
+            var kickerId = _authenticationService.GetUserId();
+            var (institutionId, userToKickId) = request;
 
-            InstitutionMember userToKick;
-
-            // The user is kicking themselves
-            if (kicker.UserId == request.UserToKickId)
-            {
-                userToKick = kicker;
-
-                if (userToKick.InstitutionRole == InstitutionRole.Admin)
+            var kicker = await _coreContext.InstitutionMembers
+                .Where(x => x.InstitutionId == institutionId && x.UserId == kickerId)
+                .Select(x => new
                 {
-                    var adminCount = await _coreContext.InstitutionMembers
-                        .CountAsync(x => x.InstitutionRole == InstitutionRole.Admin, cancellationToken);
-                    if (adminCount == 1)
-                    {
-                        throw MemberErrors.CannotQuitAsLastAdminError.AsException();
-                    }
-                }
-            }
-            else
+                    x.InstitutionRole
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (kicker is null)
             {
-                // The user is trying to kick someone else than themselves, so let's check
-                // if they have permission to do so.
-                await _institutionAuthorizationService.AuthorizeAsync(request.InstitutionId, kicker.UserId,
-                    InstitutionPermission.ManageMembers).ThrowIfUnsuccessful();
-
-                userToKick = await _coreContext.InstitutionMembers.FindByPairAsync(request.UserToKickId,
-                    request.InstitutionId,
-                    cancellationToken) ?? throw new NotFoundException($"User to kick not found.");
-
-                // Check if the kicker has the right to kick someone in their hierarchy
-                if (userToKick.InstitutionRole >= kicker.InstitutionRole)
-                {
-                    throw MemberErrors.CannotKickHigherInHierarchyError(kicker, userToKick).AsException();
-                }
+                return OperationResult.Failure(new Error(Kind: ErrorKind.NotFound));
             }
 
-            await KickUser(userToKick, cancellationToken);
+            var userToKick = await _coreContext.InstitutionMembers
+                .Where(x => x.InstitutionId == institutionId && x.UserId == userToKickId)
+                .Select(x => new
+                {
+                    x.InstitutionRole
+                })
+                .FirstOrDefaultAsync(cancellationToken);
 
-            _logger.LogInformation(
-                "User {UserId} has been kicked from the institution {InstitutionId} by user {KickerId}",
-                request.UserToKickId, request.InstitutionId, kicker.UserId);
+            if (userToKick is null)
+            {
+                return OperationResult.Failure(new Error("User to kick not found.", Kind: ErrorKind.NotFound));
+            }
 
-            return Unit.Value;
-        }
+            if (userToKickId != kickerId)
+            {
+                // Make sure they are authorized to kick someone else than themselves.
+                var authResult = await _institutionAuthorizationService.AuthorizeAsync(institutionId, kickerId,
+                    InstitutionPermission.ManageMembers);
+                if (authResult.Failed(out var authError))
+                {
+                    return OperationResult.Failure(authError);
+                }
+                
+                if (userToKick.InstitutionRole.IsHigherThan(kicker.InstitutionRole))
+                {
+                    return OperationResult.Failure(InstitutionMember.Errors.CannotKickHigherInHierarchy);
+                }
+            }
 
-        // TODO: Refactor this
-        private async Task KickUser(InstitutionMember userToKick, CancellationToken cancellationToken)
-        {
-            _coreContext.InstitutionMembers.Remove(userToKick);
-            await _coreContext.SaveChangesAsync(cancellationToken);
+            Response response = await _removeMemberClient
+                .GetResponse(new RemoveInstitutionMember(institutionId, userToKickId), cancellationToken);
+
+            return response switch
+            {
+                (_, RemoveInstitutionMember.Failure failure) => OperationResult.Failure(failure.Error),
+                (_, RemoveInstitutionMember.Success) => OperationResult.Success(),
+                _ => throw new InvalidOperationException("Unknown response type.")
+            };
         }
     }
 }

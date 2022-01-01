@@ -2,11 +2,16 @@
 using System;
 using System.Text.Json;
 using Chuech.ProjectSce.Core.API.Data;
-using Chuech.ProjectSce.Core.API.Data.Resources;
+using Chuech.ProjectSce.Core.API.Features.Institutions;
+using Chuech.ProjectSce.Core.API.Features.Resources;
+using Chuech.ProjectSce.Core.API.Infrastructure.Results;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using NodaTime;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+
+#nullable disable
 
 namespace Chuech.ProjectSce.Core.API.Migrations
 {
@@ -17,31 +22,57 @@ namespace Chuech.ProjectSce.Core.API.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasPostgresEnum(null, "educational_role", new[] { "teacher", "student", "none" })
-                .HasPostgresEnum(null, "institution_role", new[] { "admin", "none" })
-                .HasPostgresEnum(null, "resource_type", new[] { "document" })
-                .HasAnnotation("Relational:MaxIdentifierLength", 63)
-                .HasAnnotation("ProductVersion", "6.0.0-preview.7.21378.4")
-                .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
+                .HasAnnotation("ProductVersion", "6.0.1")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.Group", b =>
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "educational_role", new[] { "teacher", "student", "none" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "institution_role", new[] { "admin", "none" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "resource_type", new[] { "document" });
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.OperationLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Kind")
+                        .HasColumnType("text")
+                        .HasColumnName("kind");
+
+                    b.Property<Instant>("CreationDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creation_date");
+
+                    b.Property<JsonDocument>("ResultJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("result_json");
+
+                    b.HasKey("Id", "Kind")
+                        .HasName("pk_operation_log_id_kind");
+
+                    b.ToTable("operation_logs", (string)null);
+                });
+
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Groups.Group", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
-                        .HasColumnName("id")
-                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
+                        .HasColumnName("id");
 
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp without time zone")
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<Instant>("CreationDate")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("creation_date");
 
                     b.Property<int>("InstitutionId")
                         .HasColumnType("integer")
                         .HasColumnName("institution_id");
 
-                    b.Property<DateTime>("LastEditDate")
-                        .HasColumnType("timestamp without time zone")
+                    b.Property<Instant>("LastEditDate")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_edit_date");
 
                     b.Property<string>("Name")
@@ -49,9 +80,9 @@ namespace Chuech.ProjectSce.Core.API.Migrations
                         .HasColumnType("text")
                         .HasColumnName("name");
 
-                    b.Property<int>("UserCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("user_count");
+                    b.Property<Instant?>("SuppressionDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("suppression_date");
 
                     b.HasKey("Id")
                         .HasName("pk_groups");
@@ -61,25 +92,49 @@ namespace Chuech.ProjectSce.Core.API.Migrations
 
                     b.HasIndex("Name", "InstitutionId")
                         .IsUnique()
-                        .HasDatabaseName("ix_groups_name_institution_id");
+                        .HasDatabaseName("ix_group_name");
 
                     b.ToTable("groups", (string)null);
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.Institution", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Groups.GroupUser", b =>
+                {
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer")
+                        .HasColumnName("group_id");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("user_id");
+
+                    b.Property<Instant>("CreationDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creation_date");
+
+                    b.HasKey("GroupId", "UserId")
+                        .HasName("pk_group_user");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_group_users_user_id");
+
+                    b.ToTable("group_users", (string)null);
+                });
+
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Institutions.Institution", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
-                        .HasColumnName("id")
-                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("AdminCount")
                         .HasColumnType("integer")
                         .HasColumnName("admin_count");
 
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp without time zone")
+                    b.Property<Instant>("CreationDate")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("creation_date");
 
                     b.Property<string>("Name")
@@ -93,7 +148,7 @@ namespace Chuech.ProjectSce.Core.API.Migrations
                     b.ToTable("institutions", (string)null);
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.InstitutionMember", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Institutions.Members.InstitutionMember", b =>
                 {
                     b.Property<int>("UserId")
                         .HasColumnType("integer")
@@ -103,6 +158,10 @@ namespace Chuech.ProjectSce.Core.API.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("institution_id");
 
+                    b.Property<Instant>("CreationDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creation_date");
+
                     b.Property<EducationalRole>("EducationalRole")
                         .HasColumnType("educational_role")
                         .HasColumnName("educational_role");
@@ -110,6 +169,10 @@ namespace Chuech.ProjectSce.Core.API.Migrations
                     b.Property<InstitutionRole>("InstitutionRole")
                         .HasColumnType("institution_role")
                         .HasColumnName("institution_role");
+
+                    b.Property<Instant>("LastEditDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_edit_date");
 
                     b.HasKey("UserId", "InstitutionId")
                         .HasName("pk_institution_members");
@@ -120,22 +183,22 @@ namespace Chuech.ProjectSce.Core.API.Migrations
                     b.ToTable("institution_members", (string)null);
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.Invitation", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Invitations.Invitation", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("text")
                         .HasColumnName("id");
 
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp without time zone")
+                    b.Property<Instant>("CreationDate")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("creation_date");
 
                     b.Property<int>("CreatorId")
                         .HasColumnType("integer")
                         .HasColumnName("creator_id");
 
-                    b.Property<DateTime>("ExpirationDate")
-                        .HasColumnType("timestamp without time zone")
+                    b.Property<Instant>("ExpirationDate")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("expiration_date");
 
                     b.Property<int>("InstitutionId")
@@ -162,60 +225,92 @@ namespace Chuech.ProjectSce.Core.API.Migrations
                     b.ToTable("invitations", (string)null);
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.OperationLog", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Resources.Documents.UploadSessions.DocumentUploadSession", b =>
+                {
+                    b.Property<Guid>("CorrelationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("correlation_id");
+
+                    b.Property<int>("AuthorId")
+                        .HasColumnType("integer")
+                        .HasColumnName("author_id");
+
+                    b.Property<Instant>("CreationDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creation_date");
+
+                    b.Property<string>("CurrentState")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("current_state");
+
+                    b.Property<Guid?>("ExpirationTimeoutTokenId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("expiration_timeout_token_id");
+
+                    b.Property<Error>("Failure")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("failure");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("file_name");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint")
+                        .HasColumnName("file_size");
+
+                    b.Property<bool>("HasSentFileDeletion")
+                        .HasColumnType("boolean")
+                        .HasColumnName("has_sent_file_deletion");
+
+                    b.Property<int>("InstitutionId")
+                        .HasColumnType("integer")
+                        .HasColumnName("institution_id");
+
+                    b.Property<string>("ResourceName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("resource_name");
+
+                    b.Property<string>("UploadUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("upload_url");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("CorrelationId")
+                        .HasName("pk_document_upload_sessions");
+
+                    b.ToTable("document_upload_sessions", (string)null);
+                });
+
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Resources.Resource", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<DateTime>("CompletionDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("completion_date")
-                        .HasDefaultValueSql("NOW() at time zone 'utc'");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("kind");
-
-                    b.Property<JsonDocument>("ResultJson")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("result_json");
-
-                    b.HasKey("Id")
-                        .HasName("pk_operation_logs");
-
-                    b.HasIndex("Id", "Kind")
-                        .IsUnique()
-                        .HasDatabaseName("ix_operation_log_id_kind");
-
-                    b.ToTable("operation_logs", (string)null);
-                });
-
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.Resources.Resource", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id")
-                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
-
                     b.Property<int>("AuthorId")
                         .HasColumnType("integer")
                         .HasColumnName("author_id");
 
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp without time zone")
+                    b.Property<Instant>("CreationDate")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("creation_date");
 
                     b.Property<int>("InstitutionId")
                         .HasColumnType("integer")
                         .HasColumnName("institution_id");
 
-                    b.Property<DateTime>("LastEditDate")
-                        .HasColumnType("timestamp without time zone")
+                    b.Property<Instant>("LastEditDate")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_edit_date");
 
                     b.Property<string>("Name")
@@ -241,13 +336,70 @@ namespace Chuech.ProjectSce.Core.API.Migrations
                     b.HasDiscriminator<ResourceType>("Type");
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.Space", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Resources.ResourcePublication", b =>
+                {
+                    b.Property<Guid>("ResourceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resource_id");
+
+                    b.Property<int>("SpaceId")
+                        .HasColumnType("integer")
+                        .HasColumnName("space_id");
+
+                    b.HasKey("ResourceId", "SpaceId")
+                        .HasName("pk_resource_publications");
+
+                    b.HasIndex("SpaceId")
+                        .HasDatabaseName("ix_resource_publications_space_id");
+
+                    b.ToTable("resource_publications", (string)null);
+                });
+
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Spaces.Members.SpaceMember", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
-                        .HasColumnName("id")
-                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Category")
+                        .HasColumnType("integer")
+                        .HasColumnName("category");
+
+                    b.Property<Instant>("CreationDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creation_date");
+
+                    b.Property<string>("Discriminator")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("discriminator");
+
+                    b.Property<int>("SpaceId")
+                        .HasColumnType("integer")
+                        .HasColumnName("space_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_space_members");
+
+                    b.HasIndex("SpaceId")
+                        .HasDatabaseName("ix_space_members_space_id");
+
+                    b.ToTable("space_members", (string)null);
+
+                    b.HasDiscriminator<string>("Discriminator").HasValue("SpaceMember");
+                });
+
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Spaces.Space", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("InstitutionId")
                         .HasColumnType("integer")
@@ -256,10 +408,6 @@ namespace Chuech.ProjectSce.Core.API.Migrations
                     b.Property<int>("ManagerCount")
                         .HasColumnType("integer")
                         .HasColumnName("manager_count");
-
-                    b.Property<int>("MemberCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("member_count");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -288,45 +436,14 @@ namespace Chuech.ProjectSce.Core.API.Migrations
                     b.ToTable("spaces", (string)null);
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.SpaceMember", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Subjects.Subject", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
-                        .HasColumnName("id")
-                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
+                        .HasColumnName("id");
 
-                    b.Property<int>("Category")
-                        .HasColumnType("integer")
-                        .HasColumnName("category");
-
-                    b.Property<string>("Discriminator")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("discriminator");
-
-                    b.Property<int>("SpaceId")
-                        .HasColumnType("integer")
-                        .HasColumnName("space_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_space_members");
-
-                    b.HasIndex("SpaceId")
-                        .HasDatabaseName("ix_space_members_space_id");
-
-                    b.ToTable("space_members", (string)null);
-
-                    b.HasDiscriminator<string>("Discriminator").HasValue("SpaceMember");
-                });
-
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.Subject", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id")
-                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("Color")
                         .HasColumnType("integer")
@@ -350,7 +467,7 @@ namespace Chuech.ProjectSce.Core.API.Migrations
                     b.ToTable("subjects", (string)null);
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.User", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Users.User", b =>
                 {
                     b.Property<int>("Id")
                         .HasColumnType("integer")
@@ -367,28 +484,9 @@ namespace Chuech.ProjectSce.Core.API.Migrations
                     b.ToTable("users", (string)null);
                 });
 
-            modelBuilder.Entity("GroupUser", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Resources.Documents.DocumentResource", b =>
                 {
-                    b.Property<int>("GroupsId")
-                        .HasColumnType("integer")
-                        .HasColumnName("groups_id");
-
-                    b.Property<int>("UsersId")
-                        .HasColumnType("integer")
-                        .HasColumnName("users_id");
-
-                    b.HasKey("GroupsId", "UsersId")
-                        .HasName("pk_group_user");
-
-                    b.HasIndex("UsersId")
-                        .HasDatabaseName("ix_group_user_users_id");
-
-                    b.ToTable("group_user", (string)null);
-                });
-
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.Resources.DocumentResource", b =>
-                {
-                    b.HasBaseType("Chuech.ProjectSce.Core.API.Data.Resources.Resource");
+                    b.HasBaseType("Chuech.ProjectSce.Core.API.Features.Resources.Resource");
 
                     b.Property<string>("File")
                         .IsRequired()
@@ -402,9 +500,9 @@ namespace Chuech.ProjectSce.Core.API.Migrations
                     b.HasDiscriminator().HasValue(ResourceType.Document);
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.GroupSpaceMember", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Spaces.Members.GroupSpaceMember", b =>
                 {
-                    b.HasBaseType("Chuech.ProjectSce.Core.API.Data.SpaceMember");
+                    b.HasBaseType("Chuech.ProjectSce.Core.API.Features.Spaces.Members.SpaceMember");
 
                     b.Property<int>("GroupId")
                         .HasColumnType("integer")
@@ -420,9 +518,9 @@ namespace Chuech.ProjectSce.Core.API.Migrations
                     b.HasDiscriminator().HasValue("GroupSpaceMember");
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.UserSpaceMember", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Spaces.Members.UserSpaceMember", b =>
                 {
-                    b.HasBaseType("Chuech.ProjectSce.Core.API.Data.SpaceMember");
+                    b.HasBaseType("Chuech.ProjectSce.Core.API.Features.Spaces.Members.SpaceMember");
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer")
@@ -438,178 +536,208 @@ namespace Chuech.ProjectSce.Core.API.Migrations
                     b.HasDiscriminator().HasValue("UserSpaceMember");
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.Group", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Groups.Group", b =>
                 {
-                    b.HasOne("Chuech.ProjectSce.Core.API.Data.Institution", "Institution")
+                    b.HasOne("Chuech.ProjectSce.Core.API.Features.Institutions.Institution", "Institution")
                         .WithMany()
                         .HasForeignKey("InstitutionId")
-                        .HasConstraintName("fk_groups_institutions_institution_id")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_groups_institutions_institution_id");
 
                     b.Navigation("Institution");
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.InstitutionMember", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Groups.GroupUser", b =>
                 {
-                    b.HasOne("Chuech.ProjectSce.Core.API.Data.Institution", "Institution")
+                    b.HasOne("Chuech.ProjectSce.Core.API.Features.Groups.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_group_users_groups_group_id");
+
+                    b.HasOne("Chuech.ProjectSce.Core.API.Features.Users.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_group_users_users_user_id");
+
+                    b.Navigation("Group");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Institutions.Members.InstitutionMember", b =>
+                {
+                    b.HasOne("Chuech.ProjectSce.Core.API.Features.Institutions.Institution", "Institution")
                         .WithMany("Members")
                         .HasForeignKey("InstitutionId")
-                        .HasConstraintName("fk_institution_members_institutions_institution_id")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_institution_members_institutions_institution_id");
 
-                    b.HasOne("Chuech.ProjectSce.Core.API.Data.User", "User")
+                    b.HasOne("Chuech.ProjectSce.Core.API.Features.Users.User", "User")
                         .WithMany("InstitutionMembers")
                         .HasForeignKey("UserId")
-                        .HasConstraintName("fk_institution_members_users_user_id")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_institution_members_users_user_id");
 
                     b.Navigation("Institution");
 
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.Invitation", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Invitations.Invitation", b =>
                 {
-                    b.HasOne("Chuech.ProjectSce.Core.API.Data.User", "Creator")
+                    b.HasOne("Chuech.ProjectSce.Core.API.Features.Users.User", "Creator")
                         .WithMany()
                         .HasForeignKey("CreatorId")
-                        .HasConstraintName("fk_invitations_users_creator_id")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_invitations_users_creator_id");
 
-                    b.HasOne("Chuech.ProjectSce.Core.API.Data.Institution", "Institution")
+                    b.HasOne("Chuech.ProjectSce.Core.API.Features.Institutions.Institution", "Institution")
                         .WithMany()
                         .HasForeignKey("InstitutionId")
-                        .HasConstraintName("fk_invitations_institutions_institution_id")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_invitations_institutions_institution_id");
 
                     b.Navigation("Creator");
 
                     b.Navigation("Institution");
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.Resources.Resource", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Resources.Resource", b =>
                 {
-                    b.HasOne("Chuech.ProjectSce.Core.API.Data.User", "Author")
+                    b.HasOne("Chuech.ProjectSce.Core.API.Features.Users.User", "Author")
                         .WithMany()
                         .HasForeignKey("AuthorId")
-                        .HasConstraintName("fk_resources_users_author_id")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_resources_users_author_id");
 
-                    b.HasOne("Chuech.ProjectSce.Core.API.Data.Institution", "Institution")
+                    b.HasOne("Chuech.ProjectSce.Core.API.Features.Institutions.Institution", "Institution")
                         .WithMany()
                         .HasForeignKey("InstitutionId")
-                        .HasConstraintName("fk_resources_institutions_institution_id")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_resources_institutions_institution_id");
 
                     b.Navigation("Author");
 
                     b.Navigation("Institution");
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.Space", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Resources.ResourcePublication", b =>
                 {
-                    b.HasOne("Chuech.ProjectSce.Core.API.Data.Institution", "Institution")
+                    b.HasOne("Chuech.ProjectSce.Core.API.Features.Resources.Resource", "Resource")
+                        .WithMany("PublicationLocations")
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_resource_publications_resources_resource_id");
+
+                    b.HasOne("Chuech.ProjectSce.Core.API.Features.Spaces.Space", "Space")
+                        .WithMany()
+                        .HasForeignKey("SpaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_resource_publications_spaces_space_id");
+
+                    b.Navigation("Resource");
+
+                    b.Navigation("Space");
+                });
+
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Spaces.Members.SpaceMember", b =>
+                {
+                    b.HasOne("Chuech.ProjectSce.Core.API.Features.Spaces.Space", "Space")
+                        .WithMany("Members")
+                        .HasForeignKey("SpaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_space_members_spaces_space_id");
+
+                    b.Navigation("Space");
+                });
+
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Spaces.Space", b =>
+                {
+                    b.HasOne("Chuech.ProjectSce.Core.API.Features.Institutions.Institution", "Institution")
                         .WithMany()
                         .HasForeignKey("InstitutionId")
-                        .HasConstraintName("fk_spaces_institutions_institution_id")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_spaces_institutions_institution_id");
 
-                    b.HasOne("Chuech.ProjectSce.Core.API.Data.Subject", "Subject")
+                    b.HasOne("Chuech.ProjectSce.Core.API.Features.Subjects.Subject", "Subject")
                         .WithMany()
                         .HasForeignKey("SubjectId")
-                        .HasConstraintName("fk_spaces_subjects_subject_id")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_spaces_subjects_subject_id");
 
                     b.Navigation("Institution");
 
                     b.Navigation("Subject");
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.SpaceMember", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Subjects.Subject", b =>
                 {
-                    b.HasOne("Chuech.ProjectSce.Core.API.Data.Space", "Space")
-                        .WithMany("Members")
-                        .HasForeignKey("SpaceId")
-                        .HasConstraintName("fk_space_members_spaces_space_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Space");
-                });
-
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.Subject", b =>
-                {
-                    b.HasOne("Chuech.ProjectSce.Core.API.Data.Institution", "Institution")
+                    b.HasOne("Chuech.ProjectSce.Core.API.Features.Institutions.Institution", "Institution")
                         .WithMany()
                         .HasForeignKey("InstitutionId")
-                        .HasConstraintName("fk_subjects_institutions_institution_id")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_subjects_institutions_institution_id");
 
                     b.Navigation("Institution");
                 });
 
-            modelBuilder.Entity("GroupUser", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Spaces.Members.GroupSpaceMember", b =>
                 {
-                    b.HasOne("Chuech.ProjectSce.Core.API.Data.Group", null)
-                        .WithMany()
-                        .HasForeignKey("GroupsId")
-                        .HasConstraintName("fk_group_user_groups_groups_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Chuech.ProjectSce.Core.API.Data.User", null)
-                        .WithMany()
-                        .HasForeignKey("UsersId")
-                        .HasConstraintName("fk_group_user_users_users_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.GroupSpaceMember", b =>
-                {
-                    b.HasOne("Chuech.ProjectSce.Core.API.Data.Group", "Group")
+                    b.HasOne("Chuech.ProjectSce.Core.API.Features.Groups.Group", "Group")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .HasConstraintName("fk_space_members_groups_group_id")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_space_members_groups_group_id");
 
                     b.Navigation("Group");
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.UserSpaceMember", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Spaces.Members.UserSpaceMember", b =>
                 {
-                    b.HasOne("Chuech.ProjectSce.Core.API.Data.User", "User")
+                    b.HasOne("Chuech.ProjectSce.Core.API.Features.Users.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .HasConstraintName("fk_space_members_users_user_id")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_space_members_users_user_id");
 
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.Institution", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Institutions.Institution", b =>
                 {
                     b.Navigation("Members");
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.Space", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Resources.Resource", b =>
+                {
+                    b.Navigation("PublicationLocations");
+                });
+
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Spaces.Space", b =>
                 {
                     b.Navigation("Members");
                 });
 
-            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Data.User", b =>
+            modelBuilder.Entity("Chuech.ProjectSce.Core.API.Features.Users.User", b =>
                 {
                     b.Navigation("InstitutionMembers");
                 });

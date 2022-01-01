@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -16,17 +18,17 @@ namespace Chuech.ProjectSce.InfrastructureTools
             using var scope = host.Services.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<TContext>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<TContext>>();
-
-            const int attempts = 6;
+            
+            const int Attempts = 6;
             
             var policy = Policy
                 .Handle<Exception>()
-                .WaitAndRetry(attempts, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
+                .WaitAndRetry(Attempts, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
                     (exception, sleepDuration, retryCount, _) =>
                     {
                         logger.LogWarning("Failed to migrate database with message '{Message}' " +
                                           "(Attempt {CurrentAttempt}/{MaxAttempts}; retrying in {Sleep}ms)", 
-                            exception.Message, retryCount, attempts, sleepDuration.TotalMilliseconds);
+                            exception.Message, retryCount, Attempts, sleepDuration.TotalMilliseconds);
                     }
                 );
 
@@ -36,7 +38,7 @@ namespace Chuech.ProjectSce.InfrastructureTools
                 {
                     context.Database.Migrate();
                     
-                    using var connection = context.Database.GetDbConnection();
+                    var connection = context.Database.GetDbConnection();
                     if (connection is NpgsqlConnection postgresConnection)
                     {
                         postgresConnection.Open();

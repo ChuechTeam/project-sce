@@ -1,7 +1,6 @@
-﻿namespace Chuech.ProjectSce.Core.API.Data.Abstractions
+﻿namespace Chuech.ProjectSce.Core.API.Data.Abstractions;
+
+public interface IHaveCreationDate
 {
-    public interface IHaveCreationDate
-    {
-        DateTime CreationDate { get; set; }
-    }
+    Instant CreationDate { get; set; }
 }

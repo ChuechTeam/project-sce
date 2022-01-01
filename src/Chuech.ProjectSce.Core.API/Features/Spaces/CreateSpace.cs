@@ -1,8 +1,6 @@
 ﻿using Chuech.ProjectSce.Core.API.Data;
-using Chuech.ProjectSce.Core.API.Features.Institutions;
 using Chuech.ProjectSce.Core.API.Features.Institutions.Authorization;
 using Chuech.ProjectSce.Core.API.Features.Spaces.ApiModels;
-using Chuech.ProjectSce.Core.API.Features.Users;
 
 namespace Chuech.ProjectSce.Core.API.Features.Spaces;
 public static class CreateSpace
@@ -12,9 +10,9 @@ public static class CreateSpace
     public class Handler : IRequestHandler<Command, SpaceApiModel>
     {
         private readonly CoreContext _coreContext;
-        private readonly AuthBarrier<IInstitutionAuthorizationService> _authBarrier;
+        private readonly AuthBarrier<InstitutionAuthorizationService> _authBarrier;
 
-        public Handler(CoreContext coreContext, AuthBarrier<IInstitutionAuthorizationService> authBarrier)
+        public Handler(CoreContext coreContext, AuthBarrier<InstitutionAuthorizationService> authBarrier)
         {
             _coreContext = coreContext;
             _authBarrier = authBarrier;

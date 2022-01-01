@@ -2,35 +2,34 @@
 using Chuech.ProjectSce.Core.API.Features.Institutions;
 using Chuech.ProjectSce.Core.API.Features.Institutions.Authorization;
 
-namespace Chuech.ProjectSce.Core.API.Features.Invitations
+namespace Chuech.ProjectSce.Core.API.Features.Invitations;
+
+public static class DeleteInvitation
 {
-    public static class DeleteInvitation
+    [UseInstitutionAuthorization(InstitutionPermission.InvitePeople)]
+    public record Command(int InstitutionId, string InvitationId) : IRequest, IInstitutionRequest;
+
+    public class Handler : AsyncRequestHandler<Command>
     {
-        [UseInstitutionAuthorization(InstitutionPermission.InvitePeople)]
-        public record Command(int InstitutionId, string InvitationId) : IRequest, IInstitutionRequest;
+        private readonly CoreContext _coreContext;
 
-        public class Handler : AsyncRequestHandler<Command>
+        public Handler(CoreContext coreContext)
         {
-            private readonly CoreContext _coreContext;
+            _coreContext = coreContext;
+        }
 
-            public Handler(CoreContext coreContext)
+        protected override async Task Handle(Command request, CancellationToken cancellationToken)
+        {
+            var id = Invitation.NormalizeId(request.InvitationId);
+
+            var invitation = await _coreContext.Invitations.FindAsync(new object[] { id }, cancellationToken);
+            if (invitation is null)
             {
-                _coreContext = coreContext;
+                throw new NotFoundException("Invitation not found.");
             }
 
-            protected override async Task Handle(Command request, CancellationToken cancellationToken)
-            {
-                var id = Invitation.NormalizeId(request.InvitationId);
-
-                var invitation = await _coreContext.Invitations.FindAsync(new object[] { id }, cancellationToken);
-                if (invitation is null)
-                {
-                    throw new NotFoundException("Invitation not found.");
-                }
-
-                _coreContext.Remove(invitation);
-                await _coreContext.SaveChangesAsync(cancellationToken);
-            }
+            _coreContext.Remove(invitation);
+            await _coreContext.SaveChangesAsync(cancellationToken);
         }
     }
 }

@@ -2,12 +2,7 @@
 
 public class ProjectSceException : Exception
 {
-    public ProjectSceException(Error error) : base(error.Message)
-    {
-        Error = error;
-    }
-
-    public ProjectSceException(Error error, Exception? innerException) : base(error.Message, innerException)
+    public ProjectSceException(Error error, Exception? innerException = null) : base(error.Message, innerException)
     {
         Error = error;
     }

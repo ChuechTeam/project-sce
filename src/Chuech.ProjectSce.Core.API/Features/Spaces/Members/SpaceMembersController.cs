@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Chuech.ProjectSce.Core.API.Features.Spaces.Members;
+
 [Route("api/spaces/{spaceId:int}/members")]
 [ApiController]
 [Authorize]
@@ -38,14 +38,14 @@ public class SpaceMembersController : ControllerBase
     [HttpDelete("groups")]
     public async Task<IActionResult> RemoveGroup(RemoveMember.GroupCommand command, int spaceId)
     {
-        await _mediator.Send(command with { SpaceId = spaceId });
-        return Ok();
+        var result = await _mediator.Send(command with { SpaceId = spaceId });
+        return !result.Failed(out var error) ? Ok() : error.AsAspResult(this);
     }
 
     [HttpDelete("users")]
     public async Task<IActionResult> RemoveUser(RemoveMember.UserCommand command, int spaceId)
     {
-        await _mediator.Send(command with { SpaceId = spaceId });
-        return Ok();
+        var result = await _mediator.Send(command with { SpaceId = spaceId });
+        return !result.Failed(out var error) ? Ok() : error.AsAspResult(this);
     }
 }
