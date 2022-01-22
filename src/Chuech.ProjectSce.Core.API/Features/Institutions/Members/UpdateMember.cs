@@ -33,8 +33,12 @@ public static class UpdateMember
         {
             var initiatorId = _authenticationService.GetUserId();
 
-            await _institutionAuthorizationService.AuthorizeAsync(request.InstitutionId, initiatorId,
-                InstitutionPermission.ManageMembers).ThrowIfUnsuccessful();
+            var authResult = await _institutionAuthorizationService.AuthorizeAsync(request.InstitutionId, initiatorId,
+                InstitutionPermission.ManageMembers);
+            if (authResult.Failed(out var error))
+            {
+                return OperationResult.Failure(error);
+            }
 
             Response response =
                 await _updateClient.GetResponse(

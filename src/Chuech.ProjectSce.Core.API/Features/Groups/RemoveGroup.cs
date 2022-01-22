@@ -30,8 +30,7 @@ public static class RemoveGroup
 
         public async Task<OperationResult> Handle(Command request, CancellationToken cancellationToken)
         {
-            var group = await _coreContext.Groups
-                .ExcludeSuppressed()
+            var group = await _coreContext.AvailableGroups
                 .Select(x => new { x.Id, x.InstitutionId })
                 .FirstOrDefaultAsync(x => x.Id == request.GroupId, cancellationToken);
 

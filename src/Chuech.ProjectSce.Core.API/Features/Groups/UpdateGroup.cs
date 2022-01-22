@@ -27,7 +27,8 @@ public static class UpdateGroup
 
         protected override async Task Handle(Command request, CancellationToken cancellationToken)
         {
-            var group = await _coreContext.Groups.FirstOrDefaultAsync(x => x.Id == request.GroupId, cancellationToken);
+            var group = await _coreContext.AvailableGroups
+                .FirstOrDefaultAsync(x => x.Id == request.GroupId, cancellationToken);
             if (group is null)
             {
                 throw new NotFoundException();

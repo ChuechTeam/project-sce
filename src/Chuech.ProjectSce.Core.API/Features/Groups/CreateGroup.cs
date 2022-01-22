@@ -39,7 +39,7 @@ public static class CreateGroup
             }
 
             var group = new Group(request.InstitutionId, request.Name);
-            _coreContext.Groups.Add(group);
+            _coreContext.AllGroups.Add(group);
 
             foreach (var groupUserId in request.UserIds)
             {

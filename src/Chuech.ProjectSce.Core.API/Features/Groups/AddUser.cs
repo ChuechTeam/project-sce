@@ -25,8 +25,7 @@ public static class AddUser
 
         public async Task<Unit> Handle(Command command, CancellationToken cancellationToken)
         {
-            var group = await _coreContext.Groups
-                .ExcludeSuppressed()
+            var group = await _coreContext.AvailableGroups
                 .FirstOrDefaultAsync(x => x.Id == command.GroupId, cancellationToken);
 
             if (group is null)

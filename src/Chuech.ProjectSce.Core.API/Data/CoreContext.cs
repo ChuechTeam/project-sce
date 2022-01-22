@@ -15,6 +15,7 @@ using MassTransit.EntityFrameworkCoreIntegration;
 using MassTransit.EntityFrameworkCoreIntegration.Mappings;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Npgsql;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
 using Npgsql.NameTranslation;
@@ -54,11 +55,7 @@ public class CoreContext : SagaDbContext
         }
     }
 
-    public CoreContext(DbContextOptions<CoreContext> options) : base(
-        new DbContextOptionsBuilder<CoreContext>(options)
-            .UseExceptionProcessor()
-            .UseSnakeCaseNamingConvention()
-            .Options)
+    public CoreContext(DbContextOptions<CoreContext> options) : base(options)
     {
         _clock = this.GetService<IClock>();
     }
@@ -80,7 +77,16 @@ public class CoreContext : SagaDbContext
     public DbSet<Space> Spaces { get; private set; } = null!;
     public DbSet<SpaceMember> SpaceMembers { get; private set; } = null!;
 
-    public DbSet<Group> Groups { get; private set; } = null!;
+    /// <summary>
+    /// All the groups, including suppressed ones
+    /// </summary>
+    public DbSet<Group> AllGroups { get; private set; } = null!;
+
+    /// <summary>
+    /// All the groups which aren't suppressed
+    /// </summary>
+    public IQueryable<Group> AvailableGroups => AllGroups.ExcludeSuppressed();
+
     public DbSet<GroupUser> GroupUsers { get; private set; } = null!;
 
     public DbSet<OperationLog> OperationLogs { get; private set; } = null!;
@@ -92,7 +98,7 @@ public class CoreContext : SagaDbContext
         modelBuilder.HasPostgresEnum<ResourceType>();
         modelBuilder.HasPostgresEnum<InstitutionRole>();
         modelBuilder.HasPostgresEnum<EducationalRole>();
-
+        
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CoreContext).Assembly);
     }
 

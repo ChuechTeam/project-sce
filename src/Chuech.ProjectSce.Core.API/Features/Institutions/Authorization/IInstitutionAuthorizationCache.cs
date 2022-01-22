@@ -35,7 +35,9 @@ public class RedisInstitutionAuthorizationCache
     private static (RedisKey hashKey, RedisValue fieldKey, RedisValue fieldExpKey) GetKeys(int institutionId,
         int userId)
     {
-        return ($"institution:{institutionId}:auth", userId.ToString(), userId + "-exp");
+        const int Revision = InstitutionAuthorizationThumbprint.Revision;
+        
+        return ($"institution:{institutionId}:auth-r{Revision}", userId.ToString(), userId + "-exp");
     }
 
     public async Task<InstitutionAuthorizationThumbprint?> GetAsync(int institutionId, int userId)
@@ -47,13 +49,17 @@ public class RedisInstitutionAuthorizationCache
         {
             return null;
         }
-        
+
         var (json, exp) = (values[0], RedisToInstant(values[1]));
         if (exp is null || exp < _clock.GetCurrentInstant())
         {
-            _logger.LogDebug(
-                "Institution authorization cache expired for institution {InstitutionId} and user {UserId}",
-                institutionId, userId);
+            if (exp is not null)
+            {
+                _logger.LogDebug(
+                    "Institution authorization cache expired for institution {InstitutionId} and user {UserId}",
+                    institutionId, userId);
+            }
+
             _database.HashDelete(hashKey, new[] { fieldKey, fieldExpKey }, CommandFlags.FireAndForget);
             return null;
         }
@@ -71,7 +77,7 @@ public class RedisInstitutionAuthorizationCache
             new(fieldKey, json),
             new(fieldExpKey, _clock.GetCurrentInstant().Plus(s_ttl).ToUnixTimeMilliseconds())
         });
-        
+
         _logger.LogDebug(
             "Institution authorization cache has been updated for institution {InstitutionId} " +
             "and user {UserId}: {@NewValue}",
@@ -82,7 +88,7 @@ public class RedisInstitutionAuthorizationCache
     {
         var (hashKey, fieldKey, fieldExpKey) = GetKeys(institutionId, userId);
         await _database.HashDeleteAsync(hashKey, new[] { fieldKey, fieldExpKey });
-        
+
         _logger.LogDebug(
             "Institution authorization cache has been cleared for institution {InstitutionId} " +
             "and user {UserId}",

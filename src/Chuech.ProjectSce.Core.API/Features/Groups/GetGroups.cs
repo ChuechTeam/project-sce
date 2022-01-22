@@ -21,8 +21,7 @@ public static class GetGroups
         public async Task<IEnumerable<GroupApiModel>> Handle(Query request, CancellationToken cancellationToken)
         {
             // TODO: Security, should some users not be able to view groups?
-            return await _coreContext.Groups
-                .ExcludeSuppressed()
+            return await _coreContext.AvailableGroups
                 .Where(x => x.InstitutionId == request.InstitutionId)
                 .MapWith(GroupApiModel.Mapper(request.IncludeUsers))
                 .ToArrayAsync(cancellationToken);

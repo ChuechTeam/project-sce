@@ -8,8 +8,8 @@ namespace Chuech.ProjectSce.Core.API.Features.Groups;
 
 public sealed class Group : IFullyDatedEntity, ITransformPersistenceExceptions, ISuppressible
 {
-    public const string UniqueNameIndex = "ix_group_name";  
-    
+    public const string UniqueNameIndex = "ix_group_name";
+
     private Group()
     {
         Name = null!;
@@ -31,20 +31,20 @@ public sealed class Group : IFullyDatedEntity, ITransformPersistenceExceptions, 
 
     public Instant CreationDate { get; set; }
     public Instant LastEditDate { get; set; }
-    
+
     public Instant? SuppressionDate { get; private set; }
 
     public void MarkAsSuppressed(IClock clock)
     {
         EnsureNotSuppressed();
-        
+
         SuppressionDate = clock.GetCurrentInstant();
     }
 
     public void UpdateName(string newName)
     {
         EnsureNotSuppressed();
-        
+
         Name = newName;
     }
 
@@ -55,7 +55,7 @@ public sealed class Group : IFullyDatedEntity, ITransformPersistenceExceptions, 
             throw new InvalidOperationException("Cannot do this operation on a suppressed group.");
         }
     }
-    
+
     internal class Configuration : IEntityTypeConfiguration<Group>
     {
         public void Configure(EntityTypeBuilder<Group> builder)
@@ -88,8 +88,8 @@ public sealed class Group : IFullyDatedEntity, ITransformPersistenceExceptions, 
 
     public static class Errors
     {
-        public static readonly Error UserCannotEnter = 
-            new("A user could not enter the group.","group.userCannotEnter");
+        public static readonly Error UserCannotEnter =
+            new("A user could not enter the group.", "group.userCannotEnter");
 
         public static readonly Error NameTaken =
             new("The name is already in use.", "group.nameTaken");

@@ -19,7 +19,7 @@ public class SuppressGroupConsumer : IConsumer<SuppressGroup>
 
     public async Task Consume(ConsumeContext<SuppressGroup> context)
     {
-        var group = await _coreContext.Groups.FindAsync(context.Message.GroupId);
+        var group = await _coreContext.AllGroups.FindAsync(context.Message.GroupId);
         if (group is null)
         {
             await context.RespondIfNeededAsync(new SuppressGroup.NotFound());
@@ -27,7 +27,8 @@ public class SuppressGroupConsumer : IConsumer<SuppressGroup>
             return;
         }
 
-        if (!group.IsSuppressed())
+        var wasSuppressed = group.IsSuppressed();
+        if (!wasSuppressed)
         {
             group.MarkAsSuppressed(_clock);
             await _coreContext.SaveChangesAsync();
@@ -35,6 +36,7 @@ public class SuppressGroupConsumer : IConsumer<SuppressGroup>
 
         await context.Publish(new GroupSuppressed(group.Id));
         await context.RespondIfNeededAsync(new SuppressGroup.Success());
-        _logger.LogInformation("Group {GroupId} suppressed", group.Id);
+        _logger.LogInformation("Group {GroupId} suppressed (was it already suppressed? {WasSuppressed})", 
+            group.Id, wasSuppressed);
     }
 }

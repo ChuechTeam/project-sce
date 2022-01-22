@@ -22,8 +22,7 @@ public static class GetGroupById
         {
             // TODO: Security, should some users not be able to view groups?
             var userId = _authenticationService.GetUserId();
-            return await _coreContext.Groups
-                .ExcludeSuppressed()
+            return await _coreContext.AvailableGroups
                 .Where(x => x.Id == request.GroupId && x.Institution.Members.Any(m => m.UserId == userId))
                 .MapWith(GroupApiModel.Mapper(true))
                 .FirstOrDefaultAsync(cancellationToken);

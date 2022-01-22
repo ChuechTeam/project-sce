@@ -77,8 +77,7 @@ public static class AddMember
 
             var space = await _coreContext.Spaces.FirstAsync(x => x.Id == command.SpaceId, cancellationToken);
 
-            if (!await _coreContext.Groups
-                    .ExcludeSuppressed()
+            if (!await _coreContext.AvailableGroups
                     .AnyAsync(x => x.Id == command.GroupId && x.InstitutionId == space.InstitutionId,
                         cancellationToken))
             {
